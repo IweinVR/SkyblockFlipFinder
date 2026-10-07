@@ -1,0 +1,3327 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skyblock Flip Finder — Bazaar &amp; Craft Winst</title>
+<style>
+  :root{
+    --bg:#0f1117; --bg-panel:#171a23; --bg-panel-2:#1e2230; --border:#2a2f3f;
+    --text:#e7e9ee; --text-dim:#9aa0b4; --text-faint:#6b7186;
+    --accent:#f2c14e; --accent-dim:#8a6d1f;
+    --green:#4ade80; --green-dim:#1f5138;
+    --red:#f87171; --red-dim:#5c2323;
+    --blue:#60a5fa;
+    --radius:10px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;}
+  header{
+    padding:20px 24px 16px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#171a23,#0f1117);
+    position:sticky;top:0;z-index:20;
+  }
+  header h1{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:8px;}
+  header h1 .em{filter:saturate(1.3);}
+  header p.sub{margin:0;color:var(--text-dim);font-size:13px;}
+  .status-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;font-size:12.5px;}
+  .status-pill{
+    display:flex;align-items:center;gap:6px;background:var(--bg-panel-2);border:1px solid var(--border);
+    padding:6px 10px;border-radius:999px;color:var(--text-dim);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none;}
+  .dot.err{background:var(--red);}
+  .dot.loading{background:var(--accent);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  button{
+    font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--bg-panel-2);
+    color:var(--text);border-radius:8px;padding:6px 12px;font-size:12.5px;transition:.15s;
+  }
+  button:hover{border-color:var(--accent-dim);background:#242939;}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1a1406;font-weight:600;}
+  button.primary:hover{background:#f5cd6e;}
+  main{max-width:1180px;margin:0 auto;padding:20px 24px 60px;}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);}
+  .tab-btn{
+    background:none;border:none;border-bottom:2px solid transparent;border-radius:0;
+    color:var(--text-dim);padding:10px 6px;font-size:14px;font-weight:600;margin-right:14px;
+  }
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-btn:hover{color:var(--text);background:none;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .controls{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;
+  }
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
+  .field input[type=text], .field input[type=number], .field select{
+    background:#0f1117;border:1px solid var(--border);color:var(--text);border-radius:7px;
+    padding:7px 9px;font-size:13px;width:150px;font-family:inherit;
+  }
+  .field.grow input{width:220px;}
+  .field .hint{color:var(--text-faint);font-size:10.5px;}
+  .checkbox-field{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);padding-bottom:7px;}
+  .checkbox-field input{accent-color:var(--accent);}
+  .spacer{flex:1;}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  thead th{
+    text-align:right;padding:10px 12px;background:var(--bg-panel-2);color:var(--text-dim);
+    font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;
+    border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  thead th:first-child, thead th.left{text-align:left;}
+  thead th:hover{color:var(--accent);}
+  thead th .arrow{opacity:.5;margin-left:3px;font-size:10px;}
+  tbody td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+  tbody td:first-child, tbody td.left{text-align:left;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#1c2030;}
+  .item-name{font-weight:600;color:var(--text);}
+  .item-id{color:var(--text-faint);font-size:10.5px;display:block;}
+  .profit-pos{color:var(--green);font-weight:700;}
+  .profit-neg{color:var(--red);}
+  .margin-badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;
+  }
+  .margin-badge.hi{background:var(--green-dim);color:var(--green);}
+  .margin-badge.lo{background:#2a2f3f;color:var(--text-dim);}
+  .vol-tag{font-size:10.5px;color:var(--text-faint);}
+  .vol-tag.low{color:var(--red);}
+  .empty-state, .error-state{
+    padding:40px 20px;text-align:center;color:var(--text-dim);background:var(--bg-panel);
+    border:1px solid var(--border);border-radius:var(--radius);
+  }
+  .error-state{color:var(--red);}
+  .error-state button{margin-top:10px;}
+  .info-box{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:14px;font-size:13px;line-height:1.6;color:var(--text-dim);
+  }
+  .info-box strong{color:var(--text);}
+  .info-box code{background:#0f1117;padding:1px 5px;border-radius:4px;color:var(--accent);font-size:12px;}
+  .settings-box{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:14px;
+  }
+  .settings-box h3{margin:0 0 12px 0;font-size:14px;color:var(--text);}
+  .settings-row{margin-bottom:14px;}
+  .settings-row:last-child{margin-bottom:0;}
+  .settings-row > label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px;}
+  .settings-row input[type="number"], .settings-row input[type="text"]{
+    background:#0f1117;border:1px solid var(--border);border-radius:6px;color:var(--text);
+    padding:7px 10px;font-size:13px;
+  }
+  .settings-row .hint{display:block;font-size:11.5px;color:var(--text-faint);margin-top:6px;line-height:1.5;}
+  .npc-add-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .npc-add-row input[type="text"]{width:220px;}
+  .npc-add-row input[type="number"]{width:150px;}
+  .npc-add-row button{white-space:nowrap;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--text-faint);margin-top:10px;}
+  .foot-note{margin-top:26px;padding-top:16px;border-top:1px solid var(--border);color:var(--text-faint);font-size:11.5px;line-height:1.6;}
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .table-wrap{overflow-x:auto;border-radius:var(--radius);}
+  .table-wrap table{border-radius:0;}
+  .count-tag{color:var(--text-faint);font-size:11.5px;margin-bottom:8px;}
+  .recommend{
+    display:flex;gap:14px;align-items:flex-start;
+    background:linear-gradient(135deg,#20321f,#171a23);border:1px solid var(--green-dim);
+    border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;
+  }
+  .recommend .rec-icon{font-size:26px;line-height:1;}
+  .recommend .rec-body{flex:1;}
+  .recommend .rec-title{font-weight:700;color:var(--green);font-size:13.5px;margin-bottom:4px;}
+  .recommend .rec-text{color:var(--text);font-size:13.5px;line-height:1.55;}
+  .recommend .rec-text b{color:var(--accent);}
+  .recommend.empty{border-color:var(--border);background:var(--bg-panel);}
+  .recommend.empty .rec-title{color:var(--text-dim);}
+  .recommend.unsure{border-color:#6b5a1f;background:linear-gradient(135deg,#2b2410,#171a23);}
+  .recommend.unsure .rec-title{color:var(--accent);}
+  .cat-icon{margin-right:6px;}
+  .stab-badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;
+  }
+  .stab-badge.stable{background:var(--green-dim);color:var(--green);}
+  .stab-badge.new{background:#3a2f10;color:var(--accent);}
+  .sparkline{display:block;vertical-align:middle;}
+  .spark-empty{color:var(--text-faint);font-size:12px;}
+  .npc-flip-row{
+    background:linear-gradient(90deg,rgba(74,222,128,.14),transparent 70%) !important;
+    box-shadow:inset 4px 0 0 var(--green);
+  }
+  .npc-flip-row:hover{background:linear-gradient(90deg,rgba(74,222,128,.22),transparent 70%) !important;}
+  .npc-tag{
+    display:inline-block;margin-left:8px;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:4px;
+    background:var(--green-dim);color:var(--green);white-space:nowrap;vertical-align:middle;
+  }
+  /* trade log */
+  .trade-summary{
+    display:flex;gap:24px;flex-wrap:wrap;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;
+  }
+  .trade-summary .stat{display:flex;flex-direction:column;gap:2px;}
+  .trade-summary .stat .lbl{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
+  .trade-summary .stat .val{font-size:18px;font-weight:700;}
+  .trade-note{color:var(--text-faint);font-size:11.5px;margin:-6px 0 14px;}
+  .del-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;padding:2px 6px;}
+  .del-btn:hover{color:var(--red);}
+  .open-badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:#3a2f10;color:var(--accent);white-space:nowrap;
+  }
+  .sale-input-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .sale-input-row input{
+    background:#0f1117;border:1px solid var(--border);color:var(--text);border-radius:6px;
+    padding:5px 7px;font-size:12px;width:110px;
+  }
+  .sale-input-row button{padding:5px 9px;font-size:11.5px;}
+  .row-action-cell{text-align:center;padding:6px 8px !important;}
+  .row-add-trade-btn{padding:4px 8px;font-size:13px;line-height:1;}
+  .partial-badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:#1e2a3a;color:var(--blue);white-space:nowrap;
+  }
+  .closed-badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:var(--green-dim);color:var(--green);white-space:nowrap;
+  }
+  .trade-detail-row td{background:#12151d;padding:10px 14px 14px;border-bottom:1px solid var(--border);}
+  .sells-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
+  .sell-line{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);flex-wrap:wrap;}
+  .sell-line .sell-profit{font-weight:700;}
+  .sell-line .sell-del{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:12px;}
+  .sell-line .sell-del:hover{color:var(--red);}
+  .remaining-note{font-size:12px;color:var(--text-faint);margin-bottom:6px;}
+  .target-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);margin-left:4px;}
+  .price-compare{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .fill-target-btn{
+    display:inline-block;padding:1px 7px;font-size:10.5px;border-radius:5px;
+    background:var(--accent);border-color:var(--accent);color:#1a1406;font-weight:700;cursor:pointer;
+  }
+  /* auction house — shared bits */
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .chip{
+    display:flex;align-items:center;gap:6px;background:var(--bg-panel-2);border:1px solid var(--border);
+    border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;color:var(--text);
+  }
+  .chip .chip-del{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:50%;}
+  .chip .chip-del:hover{color:var(--red);background:var(--red-dim);}
+  .progress-bar{
+    height:6px;background:var(--bg-panel-2);border-radius:999px;overflow:hidden;margin:8px 0 4px;
+  }
+  .progress-bar .fill{height:100%;background:var(--accent);transition:width .2s;}
+  .progress-text{font-size:11.5px;color:var(--text-faint);margin-bottom:14px;}
+  .time-tag{font-size:11px;color:var(--text-faint);}
+  .time-tag.soon{color:var(--red);}
+
+  /* ---------- auction house: trading-terminal UI ---------- */
+  :root{ --mono: ui-monospace,'SF Mono','Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace; }
+  #panel-auctions{
+    background:#0a0d12;border:1px solid #1c2430;border-radius:14px;padding:18px;margin:0 -4px;
+  }
+  #panel-auctions .controls{background:#0e131a;border-color:#1c2430;}
+  #panel-auctions .chip{background:#131b24;border-color:#26323f;font-family:var(--mono);}
+
+  /* item icon (best-effort, hidden on load failure) */
+  .item-icon{width:20px;height:20px;image-rendering:pixelated;flex:none;vertical-align:middle;}
+  .item-icon.lg{width:28px;height:28px;}
+
+  /* ticker strip across the top — classic exchange-board feel */
+  .ticker-strip{
+    display:flex;gap:0;overflow-x:auto;background:#05070a;border:1px solid #1c2430;border-radius:10px;
+    margin-bottom:14px;scrollbar-width:thin;
+  }
+  .ticker-item{
+    display:flex;align-items:center;gap:8px;padding:10px 18px;border-right:1px solid #1c2430;
+    white-space:nowrap;flex:none;font-family:var(--mono);
+  }
+  .ticker-item .t-sym{font-weight:800;font-size:12.5px;color:var(--text-dim);letter-spacing:.03em;}
+  .ticker-item .t-price{font-weight:700;font-size:13.5px;color:var(--text);}
+  .ticker-item .t-delta{font-size:11.5px;font-weight:700;}
+  .ticker-item .t-delta.up{color:var(--red);}     /* price went up = worse for a buyer */
+  .ticker-item .t-delta.down{color:var(--green);} /* price dropped = better for a buyer */
+  .ticker-item.alert{background:linear-gradient(180deg,rgba(248,113,113,.12),transparent);}
+  .ticker-item.alert .t-sym{color:var(--red);}
+
+  .alert-banner{
+    display:flex;align-items:center;gap:10px;background:#1a0d0d;
+    border:1px solid var(--red);border-left:4px solid var(--red);border-radius:8px;padding:12px 18px;margin-bottom:14px;
+    font-size:14px;font-weight:700;color:#ff9b9b;font-family:var(--mono);
+    animation:alertPulseBorder 1.4s ease-in-out infinite;
+  }
+  @keyframes alertPulseBorder{0%,100%{box-shadow:0 0 0 rgba(248,113,113,0);}50%{box-shadow:0 0 18px rgba(248,113,113,.4);}}
+  .alert-banner.arb-banner{
+    background:#0d1a10;border-color:var(--green);color:var(--green);
+    animation:none;
+  }
+
+  /* instrument table — the main "broker" view: one row per watched item */
+  .instrument-table{width:100%;border-collapse:collapse;font-family:var(--mono);}
+  .instrument-table thead th{
+    text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);
+    padding:8px 14px;border-bottom:1px solid #1c2430;font-weight:600;font-family:-apple-system,sans-serif;
+  }
+  .instrument-table thead th.left{text-align:left;}
+  .instrument-table tbody tr{border-bottom:1px solid #161d27;transition:background .15s;}
+  .instrument-table tbody tr:hover{background:#0e141c;}
+  .instrument-table tbody tr.alert{
+    background:linear-gradient(90deg,rgba(248,113,113,.10),transparent 60%);
+    box-shadow:inset 4px 0 0 var(--red);
+    animation:alertRowPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes alertRowPulse{0%,100%{background-color:rgba(248,113,113,.05);}50%{background-color:rgba(248,113,113,.16);}}
+  .instrument-table tbody tr.arb-row{
+    background:linear-gradient(90deg,rgba(74,222,128,.10),transparent 60%);
+    box-shadow:inset 4px 0 0 var(--green);
+  }
+  .instrument-table td{padding:12px 14px;vertical-align:middle;}
+  .inst-symbol{display:flex;align-items:center;gap:10px;}
+  .inst-symbol .names{display:flex;flex-direction:column;line-height:1.25;}
+  .inst-symbol .n-main{font-weight:800;font-size:14px;color:var(--text);font-family:-apple-system,sans-serif;}
+  .inst-symbol .n-alert-flag{color:var(--red);margin-left:6px;font-size:12px;}
+  .inst-metric{text-align:right;white-space:nowrap;}
+  .inst-metric .v{font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+  .inst-metric .v.hot{color:var(--red);}
+  .inst-metric .v.empty{color:var(--text-faint);font-weight:500;font-size:13px;}
+  .inst-metric .t{display:block;font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .inst-metric .t.soon{color:var(--red);font-weight:700;}
+  .inst-metric .t-extra{display:block;font-size:11px;color:var(--red);margin-top:3px;font-weight:600;}
+  .inst-metric .t-extra.arb{color:var(--green);}
+  .inst-badge{
+    display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:4px;
+    background:#131b24;border:1px solid #26323f;color:var(--text-dim);white-space:nowrap;
+  }
+  .inst-matches{text-align:right;color:var(--text-faint);font-size:11px;}
+
+  /* monitor mode: fullscreen, oversized, distraction-free for a second monitor */
+  body.monitor-mode header, body.monitor-mode .tabs, body.monitor-mode .controls,
+  body.monitor-mode .foot-note, body.monitor-mode .trade-note{display:none !important;}
+  body.monitor-mode main{max-width:none;padding:20px 30px;}
+  body.monitor-mode .panel{display:none !important;}
+  body.monitor-mode #panel-auctions{display:block !important;border:none;background:transparent;padding:0;}
+  body.monitor-mode .ticker-strip{margin-bottom:20px;}
+  body.monitor-mode .ticker-item{padding:14px 22px;}
+  body.monitor-mode .ticker-item .t-sym{font-size:15px;}
+  body.monitor-mode .ticker-item .t-price{font-size:17px;}
+  body.monitor-mode .ticker-item .t-delta{font-size:14px;}
+  body.monitor-mode .instrument-table thead th{font-size:13px;padding:10px 18px;}
+  body.monitor-mode .instrument-table td{padding:20px 18px;}
+  body.monitor-mode .inst-symbol .n-main{font-size:22px;}
+  body.monitor-mode .item-icon{width:32px;height:32px;}
+  body.monitor-mode .inst-metric .v{font-size:26px;}
+  body.monitor-mode .inst-metric .t{font-size:15px;}
+  body.monitor-mode .inst-metric .t-extra{font-size:14px;}
+  body.monitor-mode .inst-badge{font-size:14px;padding:4px 10px;}
+  body.monitor-mode .alert-banner{font-size:20px;padding:18px 24px;}
+  body.monitor-mode #aucStatus{font-size:14px;}
+  .ah-flipper-header{margin-bottom:14px;}
+  .ah-flipper-header h3{margin:0 0 6px 0;font-size:14.5px;color:var(--text);}
+  .ah-flipper-header .hint{display:block;font-size:11.5px;color:var(--text-faint);line-height:1.55;margin-bottom:12px;max-width:900px;}
+  .ah-flip-badge{
+    display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:4px;margin-right:4px;
+  }
+  .ah-flip-badge.relist{background:var(--blue-dim, #1b2b3d);color:var(--blue, #7dd3fc);}
+  .ah-flip-badge.arb{background:var(--green-dim);color:var(--green);}
+  .monitor-exit-btn{position:fixed;top:16px;right:16px;z-index:50;display:none;}
+  body.monitor-mode .monitor-exit-btn{display:block;}
+
+  /* ---------- profit chart (Mijn Trades) ---------- */
+  .chart-panel{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 18px 8px;margin-bottom:16px;
+  }
+  .chart-panel h3{margin:0 0 4px;font-size:14px;color:var(--text);}
+  .chart-panel .chart-sub{font-size:11.5px;color:var(--text-faint);margin-bottom:10px;}
+  .chart-svg-wrap{position:relative;}
+  .chart-tooltip{
+    position:absolute;pointer-events:none;background:#0d1017;border:1px solid var(--border);border-radius:8px;
+    padding:8px 11px;font-size:12px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;
+    transition:opacity .1s;white-space:nowrap;z-index:5;
+  }
+  .chart-empty{color:var(--text-faint);font-size:13px;padding:30px 0;text-align:center;}
+  .daily-list{display:flex;flex-direction:column;gap:1px;max-height:220px;overflow-y:auto;margin-top:6px;}
+  .daily-row{
+    display:flex;align-items:center;justify-content:space-between;padding:8px 4px;
+    border-bottom:1px solid var(--border);font-size:12.5px;
+  }
+  .daily-row .d-date{color:var(--text-dim);}
+  .daily-row .d-count{color:var(--text-faint);font-size:11px;margin-left:6px;}
+  .daily-row .d-amt{font-weight:700;font-variant-numeric:tabular-nums;}
+
+  /* ---------- Item Maxen (enchant optimizer) ---------- */
+  .enchant-header{margin-bottom:14px;}
+  .enchant-header h3{margin:0 0 6px 0;font-size:14.5px;color:var(--text);}
+  .enchant-header .hint{display:block;font-size:11.5px;color:var(--text-faint);line-height:1.55;margin-bottom:12px;max-width:900px;}
+  .enchant-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .enchant-controls select{
+    background:#0f1117;border:1px solid var(--border);color:var(--text);border-radius:7px;
+    padding:8px 10px;font-family:inherit;font-size:13px;
+  }
+  .enchant-layout{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+  .enchant-groups{flex:1 1 480px;min-width:320px;display:flex;flex-direction:column;gap:10px;}
+  .enchant-group{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;
+  }
+  .enchant-group-title{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .enchant-opt{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;}
+  .enchant-opt label{flex:1;cursor:pointer;display:flex;justify-content:space-between;gap:8px;}
+  .enchant-opt .e-name{color:var(--text);}
+  .enchant-opt .e-lvl{color:var(--text-faint);font-size:11px;margin-left:4px;}
+  .enchant-opt .e-price{font-variant-numeric:tabular-nums;color:var(--text-dim);white-space:nowrap;}
+  .enchant-opt .e-price.na{color:var(--text-faint);font-style:italic;}
+  .enchant-summary{
+    flex:0 0 280px;min-width:240px;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px;position:sticky;top:12px;
+  }
+  .enchant-summary h4{margin:0 0 10px 0;font-size:13px;color:var(--text);}
+  .enchant-summary .e-total{font-size:22px;font-weight:700;color:var(--green);margin-bottom:4px;}
+  .enchant-summary .e-total-sub{font-size:11px;color:var(--text-faint);margin-bottom:14px;}
+  .enchant-summary .e-line{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);gap:8px;}
+  .enchant-summary .e-line .e-lname{color:var(--text-dim);}
+  .enchant-summary .e-missing{font-size:11px;color:var(--text-faint);margin-top:10px;line-height:1.5;}
+  .ultimate-none{color:var(--text-faint);}
+  .e-desc-icon{cursor:help;color:var(--text-faint);font-size:11px;margin-left:5px;}
+  .enchant-opt select.e-target-lvl, .enchant-opt select.e-current-lvl{
+    background:#0f1117;border:1px solid var(--border);color:var(--text);border-radius:6px;
+    padding:3px 5px;font-size:11.5px;font-family:inherit;
+  }
+  .enchant-opt select.e-current-lvl{color:var(--text-faint);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Skyblock Flip Finder</h1>
+  <p class="sub">Live Hypixel Bazaar data — vind bazaar-flips en craft/compact-flips met het beste winstpotentieel.</p>
+  <div class="status-row">
+    <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Nog niet geladen</span></div>
+    <div class="status-pill">⏱ Auto-refresh: <span id="countdown">—</span>s</div>
+    <button id="refreshBtn">Nu verversen</button>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="bazaar">Bazaar Flips</button>
+    <button class="tab-btn" data-tab="craft">Craft / Compact Flips</button>
+    <button class="tab-btn" data-tab="trades">Mijn Trades</button>
+    <button class="tab-btn" data-tab="auctions">Auction House</button>
+    <button class="tab-btn" data-tab="ahflip">AH Flip-scanner</button>
+    <button class="tab-btn" data-tab="npcscan">NPC-verkoop</button>
+    <button class="tab-btn" data-tab="enchant">Item Maxen</button>
+    <button class="tab-btn" data-tab="info">Uitleg</button>
+  </div>
+
+  <!-- BAZAAR TAB -->
+  <div class="panel active" id="panel-bazaar">
+    <div class="controls">
+      <div class="field grow">
+        <label>Zoeken</label>
+        <input type="text" id="bazaarSearch" placeholder="bv. enchanted, diamond...">
+      </div>
+      <div class="field">
+        <label>Budget per flip (coins)</label>
+        <input type="number" id="bazaarBudget" value="1000000" step="100000" min="0">
+      </div>
+      <div class="field">
+        <label>Max aantal (stuks)</label>
+        <input type="number" id="bazaarMaxQty" value="" step="1000" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 70000 om niet te veel te flippen</span>
+      </div>
+      <div class="field">
+        <label>Min. weekvolume</label>
+        <input type="number" id="bazaarMinVol" value="10000" step="1000" min="0">
+        <span class="hint">filtert illiquide items</span>
+      </div>
+      <div class="field">
+        <label>Categorie</label>
+        <select id="bazaarCategory"><option value="">Alle categorieën</option></select>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="bazaarTax" checked>
+        <label for="bazaarTax">Flipper tax (<span class="tax-pct-bazaar">1.25</span>%) toepassen op verkoop</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="bazaarSafe" checked>
+        <label for="bazaarSafe">Verwijder verdachte/gemanipuleerde items &amp; dunne orderboeken</label>
+      </div>
+      <div class="spacer"></div>
+    </div>
+    <div id="bazaarRecommend"></div>
+    <div class="count-tag" id="bazaarCount"></div>
+    <div id="bazaarTableWrap"></div>
+  </div>
+
+  <!-- CRAFT TAB -->
+  <div class="panel" id="panel-craft">
+    <div class="controls">
+      <div class="field grow">
+        <label>Zoeken</label>
+        <input type="text" id="craftSearch" placeholder="bv. bread, coal...">
+      </div>
+      <div class="field">
+        <label>Budget (coins)</label>
+        <input type="number" id="craftBudget" value="1000000" step="100000" min="0">
+      </div>
+      <div class="field">
+        <label>Max aantal crafts</label>
+        <input type="number" id="craftMaxQty" value="" step="10" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 20 crafts (= 20x160 grondstof)</span>
+      </div>
+      <div class="field">
+        <label>Max aantal grondstof</label>
+        <input type="number" id="craftMaxRaw" value="" step="160" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 5000 (rechtstreeks in ruwe stuks, ipv crafts)</span>
+      </div>
+      <div class="field">
+        <label>Min. weekvolume (enchanted item)</label>
+        <input type="number" id="craftMinVol" value="1000" step="500" min="0">
+      </div>
+      <div class="field">
+        <label>Categorie</label>
+        <select id="craftCategory"><option value="">Alle categorieën</option></select>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="craftTax" checked>
+        <label for="craftTax">Flipper tax (<span class="tax-pct-craft">1.25</span>%) toepassen op verkoop</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="craftSafe" checked>
+        <label for="craftSafe">Verwijder verdachte/gemanipuleerde items &amp; dunne orderboeken</label>
+      </div>
+      <div class="spacer"></div>
+    </div>
+    <div id="craftRecommend"></div>
+    <div class="count-tag" id="craftCount"></div>
+    <div id="craftTableWrap"></div>
+  </div>
+
+  <!-- TRADES TAB -->
+  <div class="panel" id="panel-trades">
+    <div class="trade-summary">
+      <div class="stat"><span class="lbl">Trades gelogd</span><span class="val" id="tradeCount">0</span></div>
+      <div class="stat"><span class="lbl">Nog niet (volledig) verkocht</span><span class="val" id="tradeOpenCount">0</span></div>
+      <div class="stat"><span class="lbl">Totale winst (gerealiseerd)</span><span class="val" id="tradeTotal">0</span></div>
+      <div class="stat"><span class="lbl">Gem. winst/verkoop</span><span class="val" id="tradeAvg">—</span></div>
+    </div>
+    <div class="chart-row" style="display:flex;gap:16px;flex-wrap:wrap;align-items:stretch;">
+      <div class="chart-panel" style="flex:2 1 480px;">
+        <h3>Winst over tijd</h3>
+        <div class="chart-sub">Cumulatieve gerealiseerde winst (elk verkoopmoment telt mee, ook deelverkopen)</div>
+        <div class="chart-svg-wrap" id="chartWrap"></div>
+      </div>
+      <div class="chart-panel" style="flex:1 1 260px;">
+        <h3>Winst per dag</h3>
+        <div class="chart-sub">Hoeveel je die dag hebt verdiend (of verloren)</div>
+        <div class="daily-list" id="dailyListWrap"></div>
+      </div>
+    </div>
+    <p class="trade-note">Dit logje leeft alleen in dit browsertabblad — bij een pagina-refresh gaat het verloren. Exporteer als CSV om het te bewaren. Gebruik de "Zet in Mijn Trades"-knop bij een aanbeveling om 'm meteen als "gekocht, nog niet verkocht" hier te zetten. Je kan een trade in delen verkopen: vul in hoeveel je nu verkocht hebt en voor hoeveel — de rest blijft "nog niet verkocht" staan totdat je ook dát deel invult. Winst (of verlies) wordt per verkoop apart berekend.</p>
+    <div class="controls">
+      <div class="field">
+        <label>Type</label>
+        <select id="tradeType">
+          <option value="bazaar">Bazaar flip</option>
+          <option value="craft">Craft flip</option>
+        </select>
+      </div>
+      <div class="field grow">
+        <label>Gekocht item</label>
+        <input type="text" id="tradeBoughtItem" placeholder="bv. Sugar Cane">
+      </div>
+      <div class="field">
+        <label>Aantal gekocht</label>
+        <input type="number" id="tradeBoughtQty" step="1" min="0" placeholder="32000">
+      </div>
+      <div class="field">
+        <label>Totale kostprijs (coins)</label>
+        <input type="number" id="tradeCost" step="1000" min="0" placeholder="99200">
+      </div>
+      <div class="field grow">
+        <label>Verkocht item</label>
+        <input type="text" id="tradeSoldItem" placeholder="bv. Enchanted Sugar Cane">
+      </div>
+      <div class="field">
+        <label>Aantal nu verkocht</label>
+        <input type="number" id="tradeSoldQty" step="1" min="0" placeholder="200 (mag minder zijn dan gekocht)">
+      </div>
+      <div class="field">
+        <label>Verkoopprijs (deze verkoop)</label>
+        <input type="number" id="tradeRevenue" step="1000" min="0" placeholder="leeg = nog niet verkocht">
+      </div>
+      <button class="primary" id="tradeAddBtn">+ Toevoegen</button>
+      <div class="spacer"></div>
+      <button id="tradeExportBtn">Exporteer CSV</button>
+      <button id="tradeClearBtn">Alles wissen</button>
+    </div>
+    <div id="tradeTableWrap"></div>
+  </div>
+
+  <!-- AUCTION HOUSE TAB -->
+  <div class="panel" id="panel-auctions">
+    <button class="monitor-exit-btn" id="aucExitMonitorBtn">✕ Monitor modus verlaten (Esc)</button>
+    <div class="controls">
+      <div class="field grow">
+        <label>Item toevoegen aan watchlist</label>
+        <input type="text" id="aucItemInput" placeholder="bv. Hyperion, Midas' Sword...">
+      </div>
+      <div class="field">
+        <label>Alert onder prijs (BIN)</label>
+        <input type="text" inputmode="decimal" id="aucAlertInput" placeholder="bv. 1m of 500k">
+        <span class="hint">1k = 1.000, 1m = 1.000.000 — waarschuwt ook bij veiling &lt;30 min</span>
+      </div>
+      <button class="primary" id="aucAddBtn">+ Toevoegen</button>
+      <div class="spacer"></div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="aucAutoScan">
+        <label for="aucAutoScan">Automatisch elke 10s scannen</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="aucSoundAlert" checked>
+        <label for="aucSoundAlert">Geluid bij alert</label>
+      </div>
+      <button id="aucMonitorBtn">Monitor modus (2e scherm)</button>
+      <button class="primary auc-scan-btn" id="aucScanBtn">Zoeken in Auction House</button>
+    </div>
+    <div class="chip-row" id="aucWatchlist"></div>
+    <p class="trade-note auc-status-text" id="aucStatus">Voeg items toe (naam óf item-ID, bv. "Hyperion" of "HYPERION") aan je watchlist en klik op "Zoeken" om alle actieve veilingen te doorzoeken. Dit doorzoekt de héle Auction House (tientallen pagina's), dus een scan kan even duren. Zet "Automatisch scannen" aan om dit als een levend dashboard te laten draaien. (Elke scan hier vult ook meteen de AH Flip-scanner en NPC-verkoop tabbladen.)</p>
+    <div class="auc-progress-wrap" id="aucProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" id="aucProgressFill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text" id="aucProgressText"></div>
+    </div>
+    <div class="ticker-strip" id="aucTicker" style="display:none;"></div>
+    <div id="aucAlertBanner"></div>
+    <div id="aucTableWrap"></div>
+  </div>
+
+  <!-- AH FLIP-SCANNER TAB -->
+  <div class="panel" id="panel-ahflip">
+    <div class="ah-flipper-header">
+      <h3>AH Flip-scanner (hele Auction House)</h3>
+      <span class="hint">Scant élke actieve BIN-veiling — niet alleen je watchlist — maar uitsluitend voor items die ook op de bazaar verhandeld worden (enchanted items, grondstoffen enz.). Dat zijn altijd identieke, stapelbare items zonder enchants/reforges/sterren, dus een eerlijke prijsvergelijking is mogelijk. Wapens, armor en pets worden bewust overgeslagen — die kan de tool niet betrouwbaar vergelijken zonder de volledige item-NBT te lezen (verschillende enchants/reforges maken "dezelfde" veiling soms totaal andere waarde). Twee soorten kansen: een BIN die duidelijk goedkoper is dan de eerstvolgende BIN van hetzelfde item (herverkoop op de AH), of een BIN die goedkoper is dan wat je er nu voor krijgt op de bazaar (arbitrage). Kom dit zelden of nooit tegen? Logisch — de meeste spelers verkopen zulke items meteen via de bazaar, dus dit zijn de uitzonderingen (fouten, haast, onwetendheid) — maar als je 'm vindt is het bijna altijd direct, makkelijk profijt. Let op: exclusief AH-plaatsingskosten voor het herverkopen.</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="ahFlipScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="ahFlipStatus">Klik op "Scan" om de héle Auction House te doorzoeken (dit is dezelfde scan als op het Auction House-tabblad — je hoeft het niet twee keer te doen).</p>
+    <div class="auc-progress-wrap" id="ahFlipProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div id="aucFlipperTableWrap"></div>
+  </div>
+
+  <!-- NPC-VERKOOP SCANNER TAB -->
+  <div class="panel" id="panel-npcscan">
+    <div class="ah-flipper-header">
+      <h3>NPC-verkoop scanner</h3>
+      <span class="hint">Doorzoekt zowel de bazaar (live, elke ~5 seconden) als de Auction House (bij een scan) op items die je nu goedkoper kan kopen dan de NPC-verkoopprijs — 100% risicovrij, direct te verzilveren door in-game aan een NPC te verkopen. NPC-prijzen komen uit de ingebouwde standaardlijst en je eigen aanpassingen (te vinden en te bewerken onder Instellingen in het Uitleg-tabblad). Het bazaar-gedeelte is altijd actueel; het AH-gedeelte toont de laatste scan (via het Auction House- of AH Flip-scanner-tabblad).</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="npcScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="npcScanStatus">Bazaar-kant is live. Klik op "Scan" om ook de Auction House mee te nemen.</p>
+    <div class="auc-progress-wrap" id="npcScanProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div id="npcScanTableWrap"></div>
+  </div>
+
+  <!-- ITEM MAXEN (ENCHANT OPTIMIZER) TAB -->
+  <div class="panel" id="panel-enchant">
+    <div class="enchant-header">
+      <h3>Item Maxen — enchant-configurator</h3>
+      <span class="hint">Kies een itemtype en zie alle mogelijke enchants ervoor, gegroepeerd per "conflictgroep" (enchants die elkaar uitsluiten — je kiest er maar één per groep). Hover over het ⓘ-icoontje voor uitleg wat een enchant precies doet. Per enchant kan je zelf het gewenste level kiezen (dus ook lager dan max, bv. Sharpness III) én invullen wat je er nu al op hebt staan — de tool rekent dan alleen de kost voor de upgrade en tipt onderaan de goedkoopste volgende stap. Kies daarnaast optioneel één Ultimate-enchant (max 1 per item), en voeg onderaan eventueel gemstones en reforge stones toe die je ook wilt meetellen. De tool telt live de bazaar-instant-koopprijs van alles bij elkaar op tot een totale "max-kost". Let op: dit is géén officiële Hypixel-data — samengesteld op basis van de Hypixel Skyblock wiki, kan verouderd zijn of zeldzame/nieuwe enchants missen, en de omschrijvingen zijn vereenvoudigd (geen letterlijke in-game tekst); check bij twijfel zelf in-game. Reforge stones die alleen via drops/dungeons te krijgen zijn zie je ter referentie, maar tellen alleen mee in het totaal als er een vaste NPC-prijs bekend is.</span>
+    </div>
+    <div class="enchant-controls">
+      <label for="enchantItemType" style="font-size:12.5px;color:var(--text-dim);">Itemtype:</label>
+      <select id="enchantItemType"></select>
+    </div>
+    <div class="enchant-layout">
+      <div class="enchant-groups" id="enchantGroups"></div>
+      <div class="enchant-summary" id="enchantSummary"></div>
+    </div>
+  </div>
+
+  <!-- INFO TAB -->
+  <div class="panel" id="panel-info">
+    <div class="settings-box">
+      <h3>Instellingen</h3>
+      <div class="settings-row">
+        <label for="settingsFlipperTax">Jouw persoonlijke flipper tax (%)</label>
+        <input type="number" id="settingsFlipperTax" step="0.01" min="0" max="100" style="width:90px;">
+        <span class="hint">Standaard 1.25% — hangt af van je Bazaar-level, fame, account-upgrades en de actieve Mayor. Wordt overal in de app gebruikt i.p.v. het vaste percentage, en bewaard in je browser.</span>
+      </div>
+      <div class="settings-row">
+        <label>NPC-verkoopprijzen (voor de risicovrije NPC-scanner hieronder)</label>
+        <div class="npc-add-row">
+          <input type="text" id="npcItemInput" placeholder="item-ID, bv. ENCHANTED_SNOW_BLOCK">
+          <input type="number" id="npcPriceInput" placeholder="NPC-prijs per stuk" min="0" step="0.1">
+          <button id="npcAddBtn">+ Toevoegen</button>
+        </div>
+        <div class="chip-row" id="npcList"></div>
+        <span class="hint">Er zit een ingebouwde standaardlijst in met bekende NPC-verkoopprijzen (o.a. alle enchanted farming/mining/mob-drops) — die wordt automatisch aangevuld zodra de itemdatabase geladen is. NPC-prijzen zijn al jaren erg stabiel in Skyblock, maar check bij twijfel altijd zelf de prijs in-game. Klopt een prijs niet meer, of mis je een item? Pas 'm hieronder aan of voeg 'm toe (het item-ID vind je bv. bovenaan de Bazaar-tabel bij het item) — je eigen aanpassingen worden nooit overschreven. Zodra de instant-koopprijs op de bazaar onder de NPC-prijs zakt, licht dat item felgroen op bovenaan de Bazaar Flips-tabel — dat is dan 100% risicovrije winst (kopen op bazaar, direct verkopen aan de NPC, geen flipper tax).</span>
+      </div>
+    </div>
+    <div class="info-box">
+      <p><strong>Bazaar Flips</strong> — Dit zijn "order flips": je plaatst een <strong>buy order</strong> op de huidige <em>Instant Sell</em>-prijs om 'm snel gevuld te krijgen, en zodra je het item hebt zet je 'm terug in de bazaar als <strong>sell order</strong> op de huidige <em>Instant Buy</em>-prijs. Winst = Instant Buy − Instant Sell, min. eventuele flipper tax.</p>
+      <p><strong>Craft / Compact Flips</strong> — De klassieke Skyblock-truc: 160 grondstoffen kosten vaak minder dan de <code>ENCHANTED_</code>-versie van datzelfde item waard is op de bazaar. Je koopt 160x de grondstof, craft 'm om (via de enchanting-tafel / craft-tabel) tot het enchanted item, en verkoopt dat weer op de bazaar. Deze tool scant automatisch alle items waarvoor dat mogelijk is.</p>
+      <p><strong>Let op liquiditeit</strong> — Een grote spread op een item met weinig weekvolume is vaak een valkuil: er zijn simpelweg te weinig kopers/verkopers om je order snel (of helemaal) gevuld te krijgen. Gebruik het volumefilter en check de "vol/week" kolom voordat je groot inzet.</p>
+      <p><strong>Filter voor manipulatie &amp; dunne orderboeken</strong> — Standaard aan: items worden uitgesloten als er te weinig losse orders op de bazaar staan (minder dan 3 kopers/verkopers), als er maar 1 prijslaag in het orderboek zit, of als de bovenste order abnormaal (&gt;35%) afwijkt van de eerstvolgende laag — een klassiek signaal dat iemand met één order de prijs kunstmatig heeft opgedreven. Ook items met een kleine "backlog" (weinig coins/stuks die daadwerkelijk in open orders staan) worden dan weggefilterd, want die kun je in de praktijk niet betrouwbaar vullen.</p>
+      <p><strong>Prijzen zijn "echt" doorgerekend</strong> — De tool gebruikt niet zomaar de bovenste (soms gemanipuleerde) orderprijs, maar loopt écht door het orderboek heen voor de hoeveelheid die jij wilt kopen/verkopen (begrensd door je budget en/of "Max aantal"). Zo wordt een enkele nep-order met een absurde prijs automatisch verdund zodra je een realistisch aantal opvraagt, en zie je de prijs die je daadwerkelijk zou krijgen — niet een theoretisch getal.</p>
+      <p><strong>Bescherming tegen "muren" van nep-orders</strong> — Sommige spelers stapelen meerdere orders vlak boven een realistische prijs om flip-tools zoals deze te misleiden (bv. een reeks orders rond 4.700 coins terwijl de eerstvolgende écht actieve order 1.350 coins is). Daarom kijkt de tool ook wat er gebeurt als je 3x dieper in het orderboek zou gaan dan nodig — wijkt die prijs meer dan 40% af, dan wordt het item uitgesloten. Daarnaast wordt elke flip met een margin boven de 150% automatisch uitgesloten, want dat komt in de praktijk vrijwel nooit voor bij een écht vulbare flip — dat is bijna altijd een lokmiddel, een bug, of verouderde data. Check bij twijfel altijd zelf de actuele orders in-game voordat je een flip uitvoert.</p>
+      <p><strong>Max aantal / max crafts / max grondstof</strong> — Vul dit in als je bewust klein wilt blijven (bv. maar 70.000 stuks flippen in plaats van je hele budget erin te gooien). Bij Craft/Compact Flips kan dat op twee manieren: "Max aantal crafts" (in aantal eindproducten, x160 grondstof) óf "Max aantal grondstof" (rechtstreeks in ruwe stuks, bv. max 5.000 Honeycomb) — vul je beide in, dan geldt de strengste van de twee. Laat leeg voor geen limiet (dan bepaalt alleen je budget en de marktdiepte hoeveel je kunt doen).</p>
+      <p><strong>⏳ Stabiliteit over meerdere refreshes</strong> — Elke keer dat de app ververst (elke 5 seconden) onthoudt hij de prijs per item. Een flip krijgt pas het groene "Stabiel"-label zodra 'ie minstens 3 refreshes achter elkaar (~15 seconden) een vergelijkbare prijs laat zien. Springt de prijs plots weg of duikt een flip maar één keer op, dan zie je "⏳ Nieuw" — dat is precies het gedrag van een lokorder die snel weer verdwijnt. De aanbeveling bovenaan gebruikt bij voorkeur alleen stabiele flips; is er geen enkele stabiele optie, dan zie je een oranje (in plaats van groene) aanbeveling met een duidelijke waarschuwing.</p>
+      <p><strong>Categorieën</strong> — Items zijn nu ingedeeld op categorie (Farming, Mining, Combat, enz.) met een icoontje, opgehaald via de officiële Hypixel item-database. Filter op categorie om bijvoorbeeld alleen farming-flips te zien.</p>
+      <p><strong>Mijn Trades</strong> — Log je eigen flips met een apart "gekocht item/aantal/prijs" en "verkocht item/aantal/prijs", zodat ook craft-flips (bv. 32.000x Honeycomb kopen → omcraften → 200x Enchanted Honeycomb verkopen) er correct in passen. Klik op "Zet in Mijn Trades" bij een aanbeveling om 'm automatisch in het logje te zetten, of vul het handmatig in na je eigen flip. Je kan een trade ook in delen verkopen — vul steeds in hoeveel je nu verkocht hebt en voor hoeveel, de rest blijft "nog niet verkocht" totdat je dat ook invult, en winst/verlies wordt per verkoop apart bijgehouden. Exporteer als CSV om je geschiedenis te bewaren — het logje zelf gaat verloren bij een pagina-refresh.</p>
+      <p><strong>Winst over tijd</strong> — Boven de trades-tabel zie je een lijngrafiek met je cumulatieve gerealiseerde winst (hover erover voor de details per dag) en een lijstje met precies hoeveel je per dag hebt verdiend of verloren.</p>
+      <p><strong>Auction House</strong> — Voeg items toe aan je watchlist via naam óf item-ID (bv. "Hyperion" of "HYPERION"), optioneel met een alert-prijs die ook shorthand aanvaardt (1k, 500k, 1.5m). Klik op "Zoeken" om de hele Auction House te doorzoeken (via de officiële, sleutelloze Hypixel Auctions API). Herkende items krijgen er automatisch een icoontje bij. Per item zie je in een overzichtelijke, beurs-achtige tabel de laagste BIN-prijs (Buy It Now, direct kopen) én de laagste actieve veiling (waar je zou moeten bieden), allebei met hoeveel tijd er nog op staat, plus een tickerbalk bovenaan met de laatste prijs en of die sinds de vorige scan omhoog of omlaag ging. Is er van dat item nog een andere, duurdere veiling die eerder afloopt dan de goedkoopste? Dan zie je dat er meteen bij, in dezelfde "laagste veiling"-cel.</p>
+      <p><strong>Alerts</strong> — Vul bij een item een "alert onder prijs" in: zodra er een BIN verschijnt die goedkoper is, licht die rij rood op (met geluid, indien aangevinkt). Dat is de enige trigger voor een alert — een veiling die bijna afloopt geeft geen alert meer (wordt wel nog gewoon getoond in de tabel, als info). De "laagste veiling" (het bod-gedeelte, niet de BIN) toont bovendien nooit meer een veiling die verder dan 2 dagen in de toekomst afloopt — die zijn toch niet bruikbaar om nu op te bieden.</p>
+      <p><strong>AH ↔ Bazaar arbitrage</strong> — Voor elk item op je watchlist dat ook op de bazaar verhandeld wordt, vergelijkt de tool automatisch de laagste BIN-prijs met wat je er nú voor zou krijgen op de bazaar (min. je flipper tax). Is de BIN goedkoper dan de bazaar-verkoopprijs? Dan zie je een groene "Arbitrage"-melding in de BIN-cel: direct, risicoarme winst door op de AH te kopen en meteen op de bazaar te verkopen. Let op: dit gaat uit van 1 stuk per veiling — check zelf de stack-grootte in-game voor je koopt, en houd er rekening mee dat een BIN al weg kan zijn tegen de tijd dat je het item opent.</p>
+      <p><strong>NPC-scanner (zero-risk)</strong> — Bevat een ingebouwde standaardlijst met bekende NPC-verkoopprijzen (o.a. alle enchanted farming/mining/mob-drops), zichtbaar en aanpasbaar onder Instellingen bovenaan dit tabblad. Zodra de instant-koopprijs op de bazaar onder de NPC-prijs van zo'n item zakt, verschijnt het felgroen bovenaan de Bazaar Flips-tabel: je koopt op de bazaar en verkoopt direct aan een NPC in-game voor gegarandeerde winst, zonder flipper tax en zonder te wachten tot een sell-order gevuld wordt. NPC-prijzen zijn historisch stabiel, maar check bij twijfel zelf de prijs in-game; je kan elke prijs aanpassen of eigen items toevoegen.</p>
+      <p><strong>Item Maxen (enchant-configurator)</strong> — Kies een itemtype (Sword, Bow, Helmet/Chestplate/Leggings/Boots, Pickaxe, Axe, Hoe of Fishing Rod) en zie alle enchants die daarop kunnen, gegroepeerd per conflictgroep (enchants die elkaar uitsluiten, bv. Sharpness/Smite/Bane of Arthropods — je kiest er maar 1) met een ⓘ-tooltip die uitlegt wat elke enchant doet. Je kiest zelf het gewenste level (ook lager dan max, bv. Sharpness III) en kan invullen wat je er nu al op hebt staan — de tool telt dan alleen de kost van de resterende upgrade en tipt de goedkoopste volgende stap. Kies er optioneel 1 Ultimate-enchant bij (er kan er maar 1 per item op zitten), en voeg gemstones en reforge stones toe om die ook mee te tellen. De tool zoekt live de bazaar-instant-koopprijs op en telt alles op tot een totale kostprijs om het item te "maxen". Dit is een hulptool op basis van community-wikidata, geen officiële Hypixel-bron — namen/max-levels/omschrijvingen kunnen ondertussen gewijzigd zijn, en sommige zeldzame enchants of reforge stones (drops/dungeon-loot zonder vaste NPC-prijs) worden daarom niet automatisch geprijsd.</p>
+      <p><strong>Monitor modus</strong> — Voor op een tweede scherm: verbergt alle andere tabbladen/besturing en toont alleen een grote, glanceable versie van de tabel en tickerbalk in fullscreen. Zet "Automatisch elke 10s scannen" aan zodat het als een levend dashboard blijft draaien zonder dat je zelf hoeft te klikken. Verlaat met Esc of de knop rechtsboven.</p>
+      <p>Een volledige scan doorzoekt tientallen pagina's, dus duurt even (meestal een paar seconden); bij automatisch scannen elke 10 seconden loopt er dus vrijwel continu een nieuwe scan, zodat je zo min mogelijk mist. Auction-resultaten blijven een momentopname: een BIN kan al gekocht zijn tegen de tijd dat je het item in-game opent, dus check altijd zelf even voordat je ervan uitgaat dat 'ie er nog staat.</p>
+      <p><strong>Aanbeveling</strong> — Bovenaan elk tabblad zie je een concrete aanbeveling op basis van je ingevulde budget: welk item je het beste kunt kopen, tegen welke prijs, en voor hoeveel je het weer kunt verkopen — gerangschikt op totale verwachte winst (niet alleen margin%), en gecorrigeerd voor hoeveel de markt realistisch kan verwerken.</p>
+      <p><strong>Wat deze tool niet doet</strong> — Dit is puur een <em>informatie- en rekentool</em> gebaseerd op de officiële, publieke Hypixel Bazaar API. Er wordt niets automatisch voor je gekocht, verkocht of geklikt — dat zou tegen de regels van Hypixel zijn (macro's/auto-clickers zijn verboden). Alle flips voer je zelf handmatig uit in het spel.</p>
+      <p><strong>Tips</strong></p>
+      <p>— Begin met flips die een goede margin% hebben ÉN een hoog weekvolume: die zijn het snelst en veiligst te vullen.<br>
+      — Prijzen bewegen continu; ververs regelmatig en reken niet op de exacte winst die hier staat op het moment dat je zelf klikt.<br>
+      — Coins verdampen niet in bazaar-flips als een order niet vult — je krijgt je coins/items dan gewoon weer terug, maar je kapitaal ligt wel "vast" totdat dat gebeurt.</p>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    Databron: officiële, sleutelloze Hypixel Bazaar API (<code>api.hypixel.net/v2/skyblock/bazaar</code>). Geen affiliatie met Hypixel. Gebruik op eigen risico — dit is een rekenhulp, geen garantie op winst.
+  </div>
+</main>
+
+<script>
+(function(){
+  const BAZAAR_URL = "https://api.hypixel.net/v2/skyblock/bazaar";
+  // Try direct first, then a chain of public CORS proxies (Hypixel's API sends no
+  // Access-Control-Allow-Origin header, so most browsers need a proxy hop).
+  const FETCH_SOURCES = [
+    { url: BAZAAR_URL, parse: (t) => JSON.parse(t) },
+    { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(BAZAAR_URL), parse: (t) => JSON.parse(t) },
+    { url: "https://corsproxy.io/?url=" + encodeURIComponent(BAZAAR_URL), parse: (t) => JSON.parse(t) },
+    { url: "https://thingproxy.freeboard.io/fetch/" + BAZAAR_URL, parse: (t) => JSON.parse(t) },
+    { url: "https://api.allorigins.win/get?url=" + encodeURIComponent(BAZAAR_URL), parse: (t) => JSON.parse(JSON.parse(t).contents) },
+  ];
+  const ITEMS_URL = "https://api.hypixel.net/v2/resources/skyblock/items";
+  const ITEMS_FETCH_SOURCES = [
+    { url: ITEMS_URL, parse: (t) => JSON.parse(t) },
+    { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(ITEMS_URL), parse: (t) => JSON.parse(t) },
+    { url: "https://corsproxy.io/?url=" + encodeURIComponent(ITEMS_URL), parse: (t) => JSON.parse(t) },
+    { url: "https://thingproxy.freeboard.io/fetch/" + ITEMS_URL, parse: (t) => JSON.parse(t) },
+    { url: "https://api.allorigins.win/get?url=" + encodeURIComponent(ITEMS_URL), parse: (t) => JSON.parse(JSON.parse(t).contents) },
+  ];
+  // Category "icons" verwijderd voor een zakelijkere, tekst-only look.
+  const CATEGORY_ICONS = {};
+  const DEFAULT_CATEGORY_ICON = '';
+  const AUCTIONS_URL = "https://api.hypixel.net/v2/skyblock/auctions";
+  const MAX_AUCTION_PAGES = 60;      // safety cap in case totalPages ever grows unexpectedly
+  const AUCTION_SCAN_CONCURRENCY = 6; // parallel page fetches during a scan
+  function buildProxySources(url){
+    return [
+      { url: url, parse: (t) => JSON.parse(t) },
+      { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(url), parse: (t) => JSON.parse(t) },
+      { url: "https://corsproxy.io/?url=" + encodeURIComponent(url), parse: (t) => JSON.parse(t) },
+      { url: "https://thingproxy.freeboard.io/fetch/" + url, parse: (t) => JSON.parse(t) },
+      { url: "https://api.allorigins.win/get?url=" + encodeURIComponent(url), parse: (t) => JSON.parse(JSON.parse(t).contents) },
+    ];
+  }
+  const REFRESH_SECONDS = 5;
+  // stability-over-time thresholds (anti "bait order" defense)
+  const STABILITY_MIN_STREAK = 3;      // needs to look consistent for this many consecutive refreshes
+  const STABILITY_TOLERANCE = 0.15;    // price may drift up to 15% between refreshes and still count as "same"
+  const SPARKLINE_MAX_POINTS = 15;     // how many recent refreshes the margin-history sparkline keeps
+  // "Healthy market" thresholds used to strip out manipulated / thin-backlog items
+  const MIN_ORDERS_PER_SIDE = 3;     // at least 3 separate player orders on each side
+  const MIN_PRICE_TIERS = 2;         // at least 2 distinct price tiers in the order book
+  const MAX_TOP_TIER_JUMP = 0.35;    // top order may not deviate >35% from the next tier
+  const MIN_BACKLOG_COINS = 20000;   // minimum coin value actually sitting in open orders
+  const MAX_SANE_MARGIN_PCT = 150;   // real, fillable bazaar flips essentially never sustain >150% margin;
+                                      // anything above this is treated as bait/manipulation/stale data
+  const CLIFF_PROBE_MULTIPLIER = 3;  // look this many times deeper into the book than what we actually fill
+  const CLIFF_PROBE_MIN_QTY = 5000;  // ...but always probe at least this many units deep
+  const CLIFF_DEVIATION = 0.4;       // if the deeper probe price differs >40% from our fill price, flag it
+
+  let bazaarData = null;       // raw products object
+  let lastUpdated = null;
+  let countdownTimer = null;
+  let secondsLeft = REFRESH_SECONDS;
+  let itemMeta = {};           // id -> {name, category}
+  let itemMetaLoaded = false;
+  let itemNameToId = {};       // lowercase display name -> id, for looking up bazaar prices by name (Mijn Trades)
+
+  let bazaarSort = {col:'marginPct', dir:'desc'};
+  let craftSort = {col:'marginPct', dir:'desc'};
+
+  // rolling per-item price history for the stability check: id -> {streak, avgBuyPrice, avgSellPrice}
+  let bazaarStability = {};
+  let craftStability = {};
+
+  // trade log — persisted to localStorage so it survives page reloads/closing the tab
+  let tradeLog = [];
+  let tradeIdCounter = 1;
+
+  // auction house watchlist + scan state — watchlist is persisted too
+  let auctionWatchlist = [];
+  let auctionResults = {};     // watch term -> {bestBin, bestAuction, soonestAuction, matchCount}
+  let auctionPrevResults = {}; // previous scan's results, kept for the ticker's up/down delta
+  let auctionScanning = false;
+  let ahFlips = []; // AH-wide flip opportunities from the most recent full scan (see computeAhFlips)
+  let lastGlobalBins = {}; // raw {id: {min1, min2}} from the most recent full scan — reused by the NPC-verkoop tab's AH side
+  let auctionFastSourceIndex = null; // remember which proxy worked, skip trying the rest
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  // escapes item-names/zoektermen etc. voordat ze in innerHTML terechtkomen — deze
+  // strings komen (indirect) van de Hypixel API of van vrije tekstinvoer van de
+  // gebruiker, dus al is het risico klein, we vertrouwen ze niet blind.
+  function escapeHTML(str){
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>'"]/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+  }
+
+  // ---------- persistence (localStorage) ----------
+  // Bewaart je trades en watchlist in de browser zelf, zodat ze blijven staan als je de
+  // pagina herlaadt of sluit. Let op: dit is per browser + per plek waar dit bestand staat —
+  // als je dit .html-bestand vervangt door een nieuwe versie op hetzelfde pad in dezelfde
+  // browser blijft het bewaard, maar in een andere browser of op een ander toestel niet.
+  const TRADE_STORAGE_KEY = 'skyblockFlipFinder_tradeLog_v1';
+  const WATCHLIST_STORAGE_KEY = 'skyblockFlipFinder_watchlist_v1';
+
+  function saveTradeLog(){
+    try {
+      localStorage.setItem(TRADE_STORAGE_KEY, JSON.stringify({ tradeLog, tradeIdCounter }));
+    } catch (e) { /* localStorage niet beschikbaar (bv. privénavigatie) — negeer stil */ }
+  }
+  function loadTradeLog(){
+    try {
+      const raw = localStorage.getItem(TRADE_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.tradeLog)){
+        tradeLog = data.tradeLog;
+        const maxId = tradeLog.reduce((m,t) => Math.max(m, t.id || 0), 0);
+        tradeIdCounter = data.tradeIdCounter && data.tradeIdCounter > maxId ? data.tradeIdCounter : maxId + 1;
+      }
+    } catch (e) { /* corrupte of ontbrekende opslag — start gewoon leeg */ }
+  }
+  function saveWatchlist(){
+    try {
+      localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(auctionWatchlist));
+    } catch (e) { /* negeer stil */ }
+  }
+  function loadWatchlist(){
+    try {
+      const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) auctionWatchlist = data;
+    } catch (e) { /* corrupte of ontbrekende opslag — start gewoon leeg */ }
+  }
+
+  // persoonlijke flipper tax (%) — hangt af van je Bazaar-level/fame/mayor, dus
+  // instelbaar i.p.v. het vaste standaardpercentage
+  const TAX_STORAGE_KEY = 'skyblockFlipFinder_flipperTax_v1';
+  const DEFAULT_FLIPPER_TAX = 0.0125;
+  let flipperTaxRate = DEFAULT_FLIPPER_TAX;
+  function saveFlipperTax(){
+    try { localStorage.setItem(TAX_STORAGE_KEY, JSON.stringify(flipperTaxRate)); } catch (e) {}
+  }
+  function loadFlipperTax(){
+    try {
+      const raw = localStorage.getItem(TAX_STORAGE_KEY);
+      if (raw === null) return;
+      const val = JSON.parse(raw);
+      if (typeof val === 'number' && val >= 0 && val < 1) flipperTaxRate = val;
+    } catch (e) {}
+  }
+
+  // NPC-verkoopprijzen (voor de zero-risk NPC-scanner). Deze prijzen zijn al jaren erg
+  // statisch in Skyblock (in tegenstelling tot bazaar-prijzen), dus we seeden een
+  // ingebouwde standaardlijst — maar wel voorzichtig: alleen bij de allereerste keer
+  // laden (niet elke sessie opnieuw overschrijven), pas nadat de item-database geladen
+  // is (om namen naar de juiste item-ID te matchen), en zonder ooit een prijs te
+  // overschrijven die de gebruiker zelf al heeft ingevuld/aangepast. Klopt een prijs
+  // niet (meer)? Pas 'm gewoon aan of verwijder 'm in Instellingen.
+  const NPC_STORAGE_KEY = 'skyblockFlipFinder_npcPrices_v1';
+  const NPC_SEEDED_KEY = 'skyblockFlipFinder_npcDefaultsSeeded_v1';
+  let npcPrices = {};
+  let npcStability = {};
+  // Naam -> NPC-verkoopprijs/stuk. Bron: publiek gedocumenteerde Hypixel Skyblock
+  // NPC-verkoopprijzen (community-overzichten); deze zijn historisch al jaren stabiel,
+  // maar controleer bij twijfel altijd zelf de prijs in-game voor je groot inzet.
+  const DEFAULT_NPC_PRICES = {
+    'Wheat': 1, 'Enchanted Bread': 60, 'Hay Bale': 9, 'Enchanted Hay Bale': 1300,
+    'Carrot': 1, 'Enchanted Carrot': 160, 'Enchanted Carrot on a Stick': 10240, 'Enchanted Golden Carrot': 20608,
+    'Potato': 1, 'Enchanted Potato': 160, 'Enchanted Baked Potato': 25600,
+    'Pumpkin': 4, 'Enchanted Pumpkin': 640,
+    'Melon': 0.5, 'Enchanted Melon': 160, 'Enchanted Glistering Melon': 1000, 'Enchanted Melon Block': 25600,
+    'Seeds': 0.5, 'Enchanted Seeds': 80,
+    'Red Mushroom': 4, 'Enchanted Red Mushroom': 640, 'Red Mushroom Block': 4, 'Enchanted Red Mushroom Block': 2300,
+    'Brown Mushroom': 4, 'Enchanted Brown Mushroom': 640, 'Brown Mushroom Block': 4, 'Enchanted Brown Mushroom Block': 2300,
+    'Cocoa Beans': 3, 'Enchanted Cocoa Beans': 480, 'Enchanted Cookie': 61500,
+    'Cactus': 1, 'Enchanted Cactus Green': 160, 'Enchanted Cactus': 25600,
+    'Sugar Cane': 2, 'Enchanted Sugar': 320, 'Enchanted Paper': 384, 'Enchanted Sugar Cane': 51200,
+    'Feather': 3, 'Enchanted Feather': 480,
+    'Leather': 3, 'Enchanted Leather': 1700,
+    'Raw Beef': 4, 'Enchanted Raw Beef': 640,
+    'Raw Porkchop': 5, 'Enchanted Pork': 800, 'Enchanted Grilled Pork': 128000,
+    'Raw Chicken': 4, 'Enchanted Raw Chicken': 640, 'Enchanted Egg': 432, 'Enchanted Cake': 2700,
+    'Mutton': 5, 'Enchanted Mutton': 800, 'Enchanted Cooked Mutton': 128000,
+    'Raw Rabbit': 4, 'Enchanted Raw Rabbit': 640,
+    'Rabbit Foot': 5, 'Rabbit Hide': 5, 'Enchanted Rabbit Foot': 800, 'Enchanted Rabbit Hide': 2880,
+    'Nether Wart': 3, 'Enchanted Nether Wart': 480,
+    'Rotten Flesh': 2, 'Enchanted Rotten Flesh': 320,
+    'Bone': 2, 'Enchanted Bone': 320,
+    'String': 3, 'Enchanted String': 576,
+    'Spider Eye': 3, 'Enchanted Spider Eye': 480, 'Enchanted Fermented Spider Eye': 31000,
+    'Gunpowder': 4, 'Enchanted Gunpowder': 640, 'Enchanted Firework Rocket': 41000,
+    'Ender Pearl': 10, 'Enchanted Ender Pearl': 200, 'Enchanted Eye of Ender': 3520,
+    'Ghast Tear': 16, 'Enchanted Ghast Tear': 80,
+    'Slimeball': 5, 'Enchanted Slimeball': 800, 'Enchanted Slime Block': 128000,
+    'Blaze Rod': 9, 'Enchanted Blaze Powder': 1440, 'Enchanted Blaze Rod': 230400,
+    'Magma Cream': 8, 'Enchanted Magma Cream': 1280,
+    'Cobblestone': 1, 'Enchanted Cobblestone': 160,
+    'Coal': 2, 'Enchanted Coal': 320, 'Enchanted Charcoal': 320, 'Enchanted Block of Coal': 51000,
+    'Iron Ingot': 3, 'Enchanted Iron': 480, 'Enchanted Iron Block': 76800,
+    'Gold Ingot': 4, 'Enchanted Gold Block': 102000,
+    'Diamond': 8, 'Enchanted Diamond': 1280, 'Enchanted Diamond Block': 204800,
+    'Lapis Lazuli': 1, 'Enchanted Lapis Lazuli': 160, 'Enchanted Lapis Lazuli Block': 25600,
+    'Emerald': 6, 'Enchanted Emerald': 960, 'Enchanted Emerald Block': 153600,
+    'Redstone': 1, 'Enchanted Redstone': 160, 'Enchanted Redstone Block': 25600,
+    'Nether Quartz': 4, 'Enchanted Quartz': 640, 'Enchanted Quartz Block': 102400,
+    'Obsidian': 12, 'Enchanted Obsidian': 1920,
+    'Glowstone Dust': 2, 'Enchanted Glowstone Dust': 320, 'Enchanted Glowstone': 61000,
+    'Gravel': 3, 'Flint': 4, 'Enchanted Flint': 640,
+    'Ice': 0.5, 'Packed Ice': 4.5, 'Enchanted Ice': 80, 'Enchanted Packed Ice': 12800,
+    'Netherrack': 1, 'Sand': 2, 'Enchanted Sand': 320,
+    'End Stone': 2, 'Enchanted End Stone': 320,
+    'Snowball': 1, 'Snow Block': 4, 'Enchanted Snow Block': 600,
+    'Oak Wood': 2, 'Enchanted Oak Wood': 320, 'Spruce Wood': 2, 'Enchanted Spruce Wood': 320,
+    'Birch Wood': 2, 'Enchanted Birch Wood': 320, 'Dark Oak Wood': 2, 'Enchanted Dark Oak Wood': 320,
+    'Acacia Wood': 2, 'Enchanted Acacia Wood': 320, 'Jungle Wood': 2, 'Enchanted Jungle Wood': 320,
+    'Raw Fish': 6, 'Enchanted Raw Fish': 960, 'Enchanted Cooked Fish': 150000,
+    'Raw Salmon': 10, 'Enchanted Raw Salmon': 1600, 'Enchanted Cooked Salmon': 256000,
+    'Clownfish': 20, 'Enchanted Clownfish': 3200,
+    'Pufferfish': 15, 'Enchanted Pufferfish': 2400,
+    'Prismarine Shard': 5, 'Enchanted Prismarine Shard': 400,
+    'Prismarine Crystals': 5, 'Enchanted Prismarine Crystals': 400,
+    'Clay': 3, 'Enchanted Clay': 480,
+    'Lily Pad': 10, 'Enchanted Lily Pad': 1600,
+    'Ink Sack': 2, 'Enchanted Ink Sack': 160,
+    'Sponge': 50, 'Enchanted Sponge': 2000, 'Enchanted Wet Sponge': 80000,
+    'Hot Potato Book': 13000, 'Compactor': 640, 'Super Compactor 3000': 50000,
+    'Enchanted Redstone Lamp': 30720, 'Enchanted Lava Bucket': 50000,
+    'Hamster Wheel': 20000, 'Foul Flesh': 25000, 'Catalyst': 500
+  };
+  function saveNpcPrices(){
+    try { localStorage.setItem(NPC_STORAGE_KEY, JSON.stringify(npcPrices)); } catch (e) {}
+  }
+  function loadNpcPrices(){
+    try {
+      const raw = localStorage.getItem(NPC_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') npcPrices = data;
+    } catch (e) {}
+  }
+  // seeded once, na het laden van de item-database (voor naam -> ID matching); vult
+  // alleen items aan die nog niet bestaan, overschrijft dus nooit eigen aanpassingen
+  function seedDefaultNpcPricesIfNeeded(){
+    try {
+      if (localStorage.getItem(NPC_SEEDED_KEY)) return;
+      let added = 0;
+      for (const name in DEFAULT_NPC_PRICES){
+        const id = itemNameToId[name.toLowerCase()];
+        if (!id || npcPrices[id] !== undefined) continue;
+        npcPrices[id] = DEFAULT_NPC_PRICES[name];
+        added++;
+      }
+      localStorage.setItem(NPC_SEEDED_KEY, '1');
+      if (added > 0){ saveNpcPrices(); if (typeof renderNpcList === 'function') renderNpcList(); if (typeof renderNpcScannerTab === 'function') renderNpcScannerTab(); }
+    } catch (e) {}
+  }
+
+  loadTradeLog();
+  loadWatchlist();
+  loadFlipperTax();
+  loadNpcPrices();
+
+  // ---------- formatting helpers ----------
+  function fmtCoins(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    const sign = n < 0 ? "-" : "";
+    n = Math.abs(n);
+    // full, non-abbreviated number with thousands separators (e.g. 1.756 instead of 1.7K)
+    if (n < 100) return sign + (Number.isInteger(n) ? n.toString() : n.toFixed(1)); // decimal only when it's not a whole number
+    return sign + Math.round(n).toLocaleString('nl-NL');
+  }
+  function fmtInt(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return Math.round(n).toLocaleString('nl-NL');
+  }
+  function fmtPct(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return (n>=0?"+":"") + n.toFixed(2) + "%";
+  }
+  function niceItemName(id){
+    let s = id.replace(/_/g,' ').toLowerCase();
+    s = s.replace(/\b\w/g, c => c.toUpperCase());
+    return s;
+  }
+
+  // ---------- fetching ----------
+  // Generic "try direct, then a chain of CORS proxies" fetcher, reused for both the
+  // bazaar (every 5s) and the static item-metadata list (once on load).
+  async function fetchWithSources(sources){
+    const errors = [];
+    for (let i = 0; i < sources.length; i++){
+      const src = sources[i];
+      try{
+        const res = await fetch(src.url, {cache:"no-store"});
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const text = await res.text();
+        const json = src.parse(text);
+        if (!json || !json.success) throw new Error("API meldde success:false");
+        return { json, errors };
+      }catch(err){
+        errors.push((src.url.split('/')[2]||'?') + ': ' + (err.message || err));
+      }
+    }
+    return { json: null, errors };
+  }
+
+  // Like fetchWithSources, but remembers which proxy worked last time and tries that
+  // one FIRST — used for the auction scan, where we hit the same handful of working
+  // sources dozens of times in a row and don't want to re-try 4 dead proxies per page.
+  async function fetchJsonSmart(url){
+    const sources = buildProxySources(url);
+    if (auctionFastSourceIndex !== null && sources[auctionFastSourceIndex]){
+      try{
+        const src = sources[auctionFastSourceIndex];
+        const res = await fetch(src.url, {cache:"no-store"});
+        if (res.ok){
+          const text = await res.text();
+          const json = src.parse(text);
+          if (json && json.success !== false) return json;
+        }
+      }catch(e){ /* fall through to full search below */ }
+    }
+    for (let i = 0; i < sources.length; i++){
+      try{
+        const src = sources[i];
+        const res = await fetch(src.url, {cache:"no-store"});
+        if (!res.ok) continue;
+        const text = await res.text();
+        const json = src.parse(text);
+        if (!json || json.success === false) continue;
+        auctionFastSourceIndex = i;
+        return json;
+      }catch(e){ /* try next source */ }
+    }
+    throw new Error('Alle databronnen faalden voor ' + url);
+  }
+
+  async function fetchBazaar(){
+    setStatus('loading', 'Data ophalen...');
+    const { json, errors } = await fetchWithSources(FETCH_SOURCES);
+    if (json){
+      applyData(json);
+    } else {
+      setStatus('err', 'Kon geen data ophalen (alle bronnen faalden)');
+      renderError(errors);
+    }
+  }
+
+  async function fetchItemMeta(){
+    // static-ish item catalogue (categories, display names) — fetched once, not every 5s
+    const { json } = await fetchWithSources(ITEMS_FETCH_SOURCES);
+    if (!json || !json.items) return;
+    const map = {};
+    for (const it of json.items){
+      if (!it.id) continue;
+      map[it.id] = {
+        name: (it.name || '').replace(/§./g, '').trim() || null,
+        category: it.category || null,
+        material: it.material || null
+      };
+    }
+    itemMeta = map;
+    itemMetaLoaded = true;
+    itemNameToId = {};
+    for (const id in map){
+      if (map[id].name) itemNameToId[map[id].name.toLowerCase()] = id;
+    }
+    populateCategoryFilters();
+    seedDefaultNpcPricesIfNeeded();
+    // re-render with the newly available names/categories
+    if (bazaarData){ renderBazaarTab(); renderCraftTab(); }
+  }
+
+  function populateCategoryFilters(){
+    if (!bazaarData) return;
+    const cats = new Set();
+    for (const id in bazaarData){
+      const meta = itemMeta[id];
+      if (meta && meta.category) cats.add(meta.category);
+    }
+    const sorted = Array.from(cats).sort();
+    ['bazaarCategory','craftCategory'].forEach(selectId => {
+      const sel = document.getElementById(selectId);
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Alle categorieën</option>' + sorted.map(c =>
+        `<option value="${c}">${niceItemName(c)}</option>`
+      ).join('');
+      if (sorted.includes(current)) sel.value = current;
+    });
+  }
+
+  function getItemDisplay(id){
+    const meta = itemMeta[id];
+    const name = (meta && meta.name) ? meta.name : niceItemName(id);
+    const category = meta ? meta.category : null;
+    const icon = category ? (CATEGORY_ICONS[category] || DEFAULT_CATEGORY_ICON) : '';
+    return { name, category, icon };
+  }
+
+  // looks up the CURRENT top-of-book instant-sell price for an item by its display
+  // name (e.g. "Enchanted Honeycomb") — used to compare an open trade's target price
+  // against what the bazaar is doing right now. Returns null if the item can't be
+  // matched (not a bazaar item, or bazaar/item data hasn't loaded yet).
+  function getCurrentSellPrice(itemName){
+    if (!bazaarData || !itemName) return null;
+    const id = itemNameToId[itemName.trim().toLowerCase()];
+    if (!id || !bazaarData[id]) return null;
+    const buySummary = bazaarData[id].buy_summary || [];
+    if (buySummary.length === 0 || !buySummary[0].pricePerUnit) return null;
+    return buySummary[0].pricePerUnit;
+  }
+
+  // ---------- Item Maxen (enchant configurator) ----------
+  // Data hieronder is samengesteld op basis van de Hypixel Skyblock wiki (Enchantments +
+  // Ultimate Enchantments pagina's). Geen officiële Hypixel-bron — kan verouderd raken of
+  // zeldzame/nieuwe enchants missen. "group" = conflictgroep: enchants met dezelfde group-
+  // waarde sluiten elkaar uit (max 1 actief), de eerste in de lijst is de voorgestelde default.
+  const ENCHANT_DB = {
+    sword: [
+      { name:'Sharpness', max:7, group:'dmg' },
+      { name:'Smite', max:7, group:'dmg' },
+      { name:'Bane of Arthropods', max:6, group:'dmg' },
+      { name:'Critical', max:7 },
+      { name:'First Strike', max:5, group:'strike' },
+      { name:'Triple-Strike', max:5, group:'strike' },
+      { name:'Execute', max:6, group:'exec' },
+      { name:'Prosecute', max:6, group:'exec' },
+      { name:'Giant Killer', max:7, group:'killer' },
+      { name:'Titan Killer', max:7, group:'killer' },
+      { name:'Life Steal', max:5, group:'lifesteal' },
+      { name:'Drain', max:5, group:'lifesteal' },
+      { name:'Mana Steal', max:3, group:'lifesteal' },
+      { name:'Thunderlord', max:7, group:'thunder' },
+      { name:'Thunderbolt', max:6, group:'thunder' },
+      { name:'Cleave', max:6 },
+      { name:'Cubism', max:6 },
+      { name:'Ender Slayer', max:7 },
+      { name:'Experience', max:5 },
+      { name:'Knockback', max:2 },
+      { name:'Looting', max:5 },
+      { name:'Scavenger', max:6 },
+      { name:'Snipe', max:4 },
+      { name:'Sunder', max:6 },
+      { name:'Tabasco', max:3 },
+      { name:'Vampirism', max:6 },
+      { name:'Venomous', max:6 },
+      { name:'Vicious', max:5 },
+    ],
+    bow: [
+      { name:'Power', max:7 },
+      { name:'Compact', max:10, group:'compact' },
+      { name:'Prismatic', max:5, group:'compact', aliases:['PRISTINE'] },
+      { name:'Chance', max:5 },
+      { name:'Dragon Tracer', max:5 },
+      { name:'Flame', max:2 },
+      { name:'Infinite Quiver', max:10 },
+      { name:'Knockback', max:2 },
+      { name:'Looting', max:5 },
+      { name:'Prosecute', max:6 },
+      { name:'Snipe', max:4 },
+      { name:'Tabasco', max:2 },
+      { name:'Toxophilite', max:1 },
+    ],
+    helmet: [
+      { name:'Growth', max:7 },
+      { name:'Respiration', max:4 },
+      { name:'Big Brain', max:5, group:'brain' },
+      { name:'Small Brain', max:5, group:'brain' },
+      { name:'Aqua Affinity', max:1 },
+      { name:'Champion', max:10 },
+      { name:'Dedication', max:10 },
+    ],
+    chestplate: [
+      { name:'Growth', max:7 },
+      { name:'Rejuvenate', max:5, group:'rejuv' },
+      { name:'Respite', max:5, group:'rejuv' },
+      { name:'Thorns', max:3, group:'thorns' },
+      { name:'Blessing', max:5 },
+      { name:'Champion', max:10 },
+      { name:'Cultivation', max:10 },
+      { name:'Dedication', max:10 },
+    ],
+    leggings: [
+      { name:'Growth', max:7 },
+      { name:'Smarty Pants', max:5 },
+      { name:'Champion', max:10 },
+      { name:'Dedication', max:10 },
+    ],
+    boots: [
+      { name:'Growth', max:7 },
+      { name:'Depth Strider', max:3 },
+      { name:'Feather Falling', max:10 },
+      { name:'Sugar Rush', max:3 },
+      { name:'Turbo-Crop', max:6, manual:true, note:'Naam varieert per gewas (bv. Turbo-Wheat) — niet automatisch te prijzen.' },
+      { name:'Champion', max:10 },
+      { name:'Cultivation', max:10 },
+      { name:'Dedication', max:10 },
+    ],
+    pickaxe: [
+      { name:'Efficiency', max:10 },
+      { name:'Fortune', max:4, group:'harvest' },
+      { name:'Silk Touch', max:1, group:'harvest' },
+      { name:'Smelting Touch', max:1, group:'harvest' },
+      { name:'Compact', max:10, group:'compact' },
+      { name:'Prismatic', max:5, group:'compact', aliases:['PRISTINE'] },
+      { name:'Experience', max:5 },
+    ],
+    axe: [
+      { name:'Efficiency', max:10 },
+      { name:'Fortune', max:4, group:'harvest' },
+      { name:'Silk Touch', max:1, group:'harvest' },
+      { name:'Smelting Touch', max:1, group:'harvest' },
+      { name:'Compact', max:10, group:'compact' },
+      { name:'Prismatic', max:5, group:'compact', aliases:['PRISTINE'] },
+      { name:'Cultivating', max:10 },
+      { name:'Green Thumb', max:6 },
+      { name:'Lumberjack', max:5 },
+      { name:'Replenish', max:1 },
+      { name:'Tabasco', max:6 },
+      { name:'Turbo-Crop', max:6, manual:true, note:'Naam varieert per gewas (bv. Turbo-Wheat) — niet automatisch te prijzen.' },
+      { name:'Experience', max:5 },
+    ],
+    hoe: [
+      { name:'Efficiency', max:10 },
+      { name:'Fortune', max:4 },
+      { name:'Harvesting', max:6 },
+      { name:'Cultivating', max:10 },
+      { name:'Delicate', max:5 },
+      { name:'Replenish', max:1 },
+      { name:'Turbo-Crop', max:5, manual:true, note:'Naam varieert per gewas (bv. Turbo-Wheat) — niet automatisch te prijzen.' },
+      { name:'Experience', max:5 },
+    ],
+    fishing_rod: [
+      { name:'Power', max:7 },
+      { name:'Luck of the Sea', max:6 },
+      { name:'Lure', max:6 },
+      { name:'Angler', max:6 },
+      { name:'Blessing', max:6 },
+      { name:'Corruption', max:5 },
+      { name:'Drain', max:5 },
+      { name:'Expertise', max:10 },
+      { name:'Looting', max:5 },
+      { name:'Piscary', max:6 },
+      { name:'Spiked Hook', max:7 },
+      { name:'Tabasco', max:2 },
+      { name:'Thunderbolt', max:6 },
+      { name:'Experience', max:6 },
+    ],
+  };
+  // "Alle harnas-onderdelen" enchants — worden aan elk van de 4 armor-lijsten toegevoegd.
+  const ARMOR_COMMON = [
+    { name:'Protection', max:7, group:'prot' },
+    { name:'Blast Protection', max:7, group:'prot' },
+    { name:'Fire Protection', max:7, group:'prot' },
+    { name:'Projectile Protection', max:7, group:'prot' },
+    { name:'True Protection', max:7 },
+    { name:'Hardened Mana', max:10, group:'mana' },
+    { name:'Strong Mana', max:10, group:'mana' },
+    { name:'Ferocious Mana', max:10, group:'mana' },
+    { name:'Mana Vampire', max:10, group:'mana' },
+    { name:'Thorns', max:3, group:'thorns2' },
+    { name:'Reflection', max:3, group:'thorns2' },
+    { name:'Health', max:7 },
+    { name:'Charm', max:5 },
+    { name:'Corruption', max:5 },
+    { name:'Forest Pledge', max:5 },
+  ];
+  ['helmet','chestplate','leggings','boots'].forEach(piece => {
+    ENCHANT_DB[piece] = ENCHANT_DB[piece].concat(ARMOR_COMMON);
+  });
+
+  // Ultimate-enchants: slechts 1 per item mogelijk. "cats" = op welke itemtypes deze
+  // ultimate van toepassing is (uit ENCHANT_DB-keys hierboven).
+  const ULTIMATE_DB = [
+    { name:'One For All', max:1, cats:['sword','bow'] },
+    { name:'Ultimate Wise', max:5, cats:['sword','bow'] },
+    { name:'Chimera', max:5, cats:['sword','bow'] },
+    { name:'Combo', max:5, cats:['sword','bow'] },
+    { name:'Fatal Tempo', max:5, cats:['sword','bow'] },
+    { name:'Inferno', max:5, cats:['sword','bow'] },
+    { name:'Soul Eater', max:5, cats:['sword','bow'] },
+    { name:'Swarm', max:5, cats:['sword','bow'] },
+    { name:'Rend', max:5, cats:['bow'] },
+    { name:'Duplex', max:5, cats:['bow'] },
+    { name:'Bank', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:"Bobbin' Time", max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Habanero Tactics', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Last Stand', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Legion', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'No Pain No Gain', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Refrigerate', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Wisdom', max:5, cats:['helmet','chestplate','leggings','boots'] },
+    { name:'Crop Fever', max:5, cats:['hoe','axe'] },
+    { name:'First Impression', max:5, cats:['axe'] },
+    { name:'Missile', max:5, cats:['axe'] },
+    { name:'Flowstate', max:3, cats:['pickaxe'] },
+    { name:'Flash', max:5, cats:['fishing_rod'] },
+  ];
+
+  const ENCHANT_TYPE_LABELS = {
+    sword:'Sword', bow:'Bow', helmet:'Helmet', chestplate:'Chestplate',
+    leggings:'Leggings', boots:'Boots', pickaxe:'Pickaxe', axe:'Axe',
+    hoe:'Hoe', fishing_rod:'Fishing Rod',
+  };
+
+  // Korte, vereenvoudigde omschrijvingen per enchant — bedoeld als geheugensteun, geen
+  // letterlijke in-game tooltip-tekst. Percentages/getallen kunnen per level en per
+  // Hypixel-update afwijken; check bij twijfel zelf de enchant-tafel in-game.
+  const ENCHANT_DESC = {
+    'Sharpness':'Verhoogt melee-schade tegen alle mobs.',
+    'Smite':'Verhoogt melee-schade tegen undead mobs (zombies, skeletons, wither-mobs...).',
+    'Bane of Arthropods':'Verhoogt melee-schade tegen arthropods (spiders, endermites, silverfish...).',
+    'Critical':'Verhoogt je crit-damage.',
+    'First Strike':'Bonusschade op de eerste hit tegen een mob.',
+    'Triple-Strike':'Elke 3e hit doet flink meer schade.',
+    'Execute':'Meer schade tegen mobs met minder health.',
+    'Prosecute':'Bonusschade tegen mobs binnen een grote AoE.',
+    'Giant Killer':'Meer schade tegen mobs met veel meer HP dan jij.',
+    'Titan Killer':'Meer schade tegen mobs met veel meer defense dan jij.',
+    'Life Steal':'Kans om health te stelen bij een hit.',
+    'Drain':'Geneest je bij het doden van een mob.',
+    'Mana Steal':'Kans om mana te stelen bij een hit.',
+    'Thunderlord':'Bouwt lading op die na genoeg hits bliksem-AoE-schade doet.',
+    'Thunderbolt':'Kans om bliksem te laten inslaan bij een hit.',
+    'Cleave':'Damaget alle mobs rondom je doelwit.',
+    'Cubism':'Extra schade tegen "kubus-vormige" mobs (o.a. slimes, magma cubes).',
+    'Ender Slayer':'Meer schade tegen endermen en enderman-achtige mobs.',
+    'Experience':'Meer XP van gedode mobs.',
+    'Knockback':'Stoot mobs verder weg bij een hit.',
+    'Looting':'Meer/betere drops van gedode mobs.',
+    'Scavenger':'Meer coins van gedode mobs.',
+    'Snipe':'Bonusschade als je een tijdje niet gehit bent.',
+    'Sunder':'Verzwakt de defense van je doelwit tijdelijk.',
+    'Tabasco':'Kans op extra vuurschade/effect bij een hit.',
+    'Vampirism':'Sterkere lifesteal-variant.',
+    'Venomous':'Kans om je doelwit te vergiftigen (damage over time).',
+    'Vicious':'Kans op een extra, harde bonus-hit.',
+    'Power':'Verhoogt boog-schade.',
+    'Compact':'Verzamelt automatisch pijlen op korte afstand.',
+    'Prismatic':'Combineert Compact-achtige verzamel-bonus met extra effecten (vervangt "Pristine").',
+    'Chance':'Kans op een bonus-effect per schot.',
+    'Dragon Tracer':'Pijlen keren na een tijdje terug naar je.',
+    'Flame':'Zet doelwitten in brand.',
+    'Infinite Quiver':'Kans om geen pijl te verbruiken per schot.',
+    'Toxophilite':'Kleine algemene boog-stat-boost.',
+    'Growth':'Verhoogt max health.',
+    'Respiration':'Langer onder water kunnen ademen/zien.',
+    'Big Brain':'Verhoogt Intelligence.',
+    'Small Brain':'Verlaagt Intelligence maar geeft een andere bonus terug (bewust "negatieve" enchant).',
+    'Aqua Affinity':'Normale mijnsnelheid onder water.',
+    'Champion':'Bonus op basis van je Slayer-levels.',
+    'Dedication':'Bonus die groeit met je collection-voortgang.',
+    'Rejuvenate':'Verhoogt genezing (healing) via potions/staffs e.d.',
+    'Respite':'Tijdelijke schild/regen-bonus na het nemen van schade.',
+    'Thorns':'Kans om schade terug te kaatsen naar de aanvaller.',
+    'Blessing':'Kans op extra coins/XP bonus.',
+    'Cultivation':'Bonus gekoppeld aan Farming-collections.',
+    'Smarty Pants':'Verhoogt Intelligence.',
+    'Depth Strider':'Sneller bewegen in water.',
+    'Feather Falling':'Minder val-schade.',
+    'Sugar Rush':'Tijdelijke speed-boost bij het nemen van schade.',
+    'Turbo-Crop':'Verhoogt farming fortune voor een specifiek gewas (naam varieert, bv. Turbo-Wheat).',
+    'Efficiency':'Verhoogt mijnsnelheid.',
+    'Fortune':'Meer drops per gemined blok (mining fortune).',
+    'Silk Touch':'Blokken droppen zichzelf i.p.v. hun normale drop.',
+    'Smelting Touch':'Blokken droppen automatisch hun gesmolten (gesmolten oven) versie.',
+    'Cultivating':'Bonus gekoppeld aan Farming/Foraging-collections.',
+    'Green Thumb':'Kans op een extra Enchanted-versie van het gehakte hout.',
+    'Lumberjack':'Meer XP/drops bij het hakken van bomen.',
+    'Replenish':'Plant automatisch een nieuw gewas na oogsten.',
+    'Harvesting':'Verhoogt farming fortune.',
+    'Delicate':'Iets betere kwaliteit/kans bij het oogsten.',
+    'Luck of the Sea':'Betere vis-kwaliteit/treasure-kans.',
+    'Lure':'Sneller beet bij het vissen.',
+    'Angler':'Meer vis-drops in het algemeen.',
+    'Corruption':'Meer kans op "gecorrumpeerde" (moeilijkere maar waardevollere) vangsten.',
+    'Expertise':'Bonus XP/coins gekoppeld aan fishing.',
+    'Piscary':'Bonus mana/health regen tijdens het vissen.',
+    'Spiked Hook':'Bonusschade tegen sea creatures.',
+    'Protection':'Vermindert algemene schade.',
+    'Blast Protection':'Vermindert explosie-schade.',
+    'Fire Protection':'Vermindert vuur-schade.',
+    'Projectile Protection':'Vermindert schade van projectielen.',
+    'True Protection':'Sterke algemene defense-bonus tegen bosses (zeldzaam/duur).',
+    'Hardened Mana':'Verhoogt max mana.',
+    'Strong Mana':'Sterkere versie van Hardened Mana.',
+    'Ferocious Mana':'Sterkste variant, meer max mana.',
+    'Mana Vampire':'Steelt mana van mobs bij een hit i.p.v. pure max-mana-bonus.',
+    'Reflection':'Kaatst een deel van binnenkomende schade terug.',
+    'Health':'Verhoogt max health.',
+    'Charm':'Extra effect bij het gebruik van potions.',
+    'Forest Pledge':'Bonus gekoppeld aan Foraging.',
+    'One For All':'Verwijdert alle andere enchants maar geeft enorme bonusschade (alles-of-niets keuze).',
+    'Ultimate Wise':'Verlaagt de mana-kosten van itemabilities fors.',
+    'Chimera':'Kopieert een deel van de stats van je actieve pet.',
+    'Combo':'Bouwt een combo-teller op die je schade verhoogt bij opeenvolgende hits.',
+    'Fatal Tempo':'Verhoogt ferocity bij opeenvolgende hits.',
+    'Inferno':'Elke 10e hit "brandmerkt" de mob voor schade over tijd.',
+    'Soul Eater':'Krijgt tijdelijk kracht op basis van de schade van je vorige gedode mob.',
+    'Swarm':'Meer schade naarmate er meer vijanden dichtbij zijn.',
+    'Rend':'Left-click ability die pijlen laat exploderen voor bonusschade.',
+    'Duplex':'Schiet een tweede pijl met vuureffect mee.',
+    'Bank':'Bespaart een deel van je coins bij overlijden; mobs droppen coins.',
+    "Bobbin' Time":'Boost fishing-stats en magic find op basis van nabije bobbers.',
+    'Habanero Tactics':'Boost genezing/slayer-schade/combat wisdom.',
+    'Last Stand':'Meer defense zodra je health onder ~40% zakt.',
+    'Legion':'Bonus stats op basis van nabije spelers.',
+    'No Pain No Gain':'Kans op XP-orbs bij het raken van mobs.',
+    'Refrigerate':'Zet ongebruikte mana tijdelijk om in extra defense.',
+    'Wisdom':'Bonus Intelligence op basis van je skill-XP-levels.',
+    'Crop Fever':'Kans op bonusgewassen en zeldzame drops bij oogsten/hakken.',
+    'First Impression':'Bonus sweep-schade op de eerste hit met een bijl.',
+    'Missile':'Vermindert de sweep-penalty bij het gooien van bijlen.',
+    'Flowstate':'Mijnsnelheid stijgt naarmate je meer blokken achter elkaar mined.',
+    'Flash':'Kans om direct een vis aan te trekken.',
+  };
+
+  // ---------- Gemstones & Reforge Stones ----------
+  // Bron: Hypixel Skyblock wiki. Gemstones zijn bazaar-verhandelbaar (patroon
+  // <TIER>_<TYPE>_GEM); reforge stones zijn meestal drops/dungeon-loot/NPC-aankopen —
+  // niet allemaal via de bazaar te koop, dat wordt hieronder eerlijk aangegeven.
+  const GEM_TYPES = ['Ruby','Amber','Sapphire','Jade','Amethyst','Topaz','Jasper','Opal','Onyx','Aquamarine','Citrine','Peridot'];
+  const GEM_TIERS = ['Rough','Flawed','Fine','Flawless','Perfect'];
+  // Reforge stones: prijs is een vast NPC-bedrag waar bekend, anders null (niet via bazaar/NPC te koop).
+  const REFORGE_STONES = [
+    { name:'Black Diamond', reforge:'Fruitful', applies:'Pickaxe/Drill', npcPrice:100, source:'NPC (Mining Merchant, Hub)' },
+    { name:'Andesite Whetstone', reforge:'Refined', applies:'Pickaxe/Drill', npcPrice:1000000, source:'NPC (Smithmonger)' },
+    { name:'Moil Log', reforge:'Moil', applies:'Axe', npcPrice:50000, source:'NPC (Smithmonger)' },
+    { name:'Toil Log', reforge:'Toil', applies:'Axe', npcPrice:1000000, source:'NPC (Smithmonger)' },
+    { name:'Blessed Fruit', reforge:'Blessed', applies:'Farming tool', npcPrice:1000000, source:'NPC (Smithmonger)' },
+    { name:"Golden Ball", reforge:'Bountiful', applies:'Farming tool', npcPrice:1000000, source:'NPC (Jake, na Loch Emperor)' },
+    { name:'Large Walnut', reforge:'Earthy', applies:'Farming tool', npcPrice:150, source:'NPC (SkyMart, 150 Copper)' },
+    { name:'Dirt Bottle', reforge:'Dirty', applies:'Melee weapon', npcPrice:100000, source:'NPC (Smithmonger)' },
+    { name:'SkyMart Brochure', reforge:'Bustling', applies:'Armor', npcPrice:100, source:'NPC (SkyMart, 100 Copper)' },
+    { name:"Boo Stone", reforge:'Greater Spook', applies:'Spooky armor', npcPrice:10000, source:'NPC (Tyashoi Alchemist, seizoensgebonden)' },
+    { name:'Necromancer\'s Brooch', reforge:'Necrotic', applies:'Armor', npcPrice:null, source:'Dungeon-drop (Catacombs I-IV)' },
+    { name:'Dragon Horn', reforge:'Renowned', applies:'Armor', npcPrice:null, source:'Drop (Superior Dragon)' },
+    { name:'Rare Diamond', reforge:'Reinforced', applies:'Armor', npcPrice:null, source:'Mining-drop (Diamond Ore/Block)' },
+    { name:'Dragon Claw', reforge:'Fabled', applies:'Melee weapon', npcPrice:null, source:'Drop (Ender Dragon)' },
+    { name:'Spirit Stone', reforge:'Spiritual', applies:'Bow', npcPrice:null, source:'Dungeon-drop (Catacombs F4)' },
+    { name:'Optical Lens', reforge:'Precise', applies:'Bow', npcPrice:null, source:'Drop (The Watcher)' },
+    { name:'Giant Tooth', reforge:'Giant', applies:'Armor', npcPrice:null, source:'Dungeon-drop (Catacombs F6)' },
+  ];
+  let gemList = [];      // [{type, tier, id, price}]
+  let reforgeList = [];  // [{name, price, source}]
+
+  function gemBazaarId(tier, type){ return `${tier.toUpperCase()}_${type.toUpperCase()}_GEM`; }
+  function gemBazaarPrice(tier, type){
+    if (!bazaarData) return null;
+    const id = gemBazaarId(tier, type);
+    const p = bazaarData[id];
+    if (p && p.sell_summary && p.sell_summary.length && p.sell_summary[0].pricePerUnit) return { price: p.sell_summary[0].pricePerUnit, id };
+    return null;
+  }
+  function renderGemReforgeSection(){
+    let gemOptions = '';
+    GEM_TIERS.forEach(tier => GEM_TYPES.forEach(type => {
+      gemOptions += `<option value="${tier}|${type}">${tier} ${type}</option>`;
+    }));
+    let gemHtml = `<div class="enchant-group"><div class="enchant-group-title">Gemstones toevoegen</div>
+      <div class="npc-add-row"><select id="gemPickSelect">${gemOptions}</select><button id="gemAddBtn">+ Toevoegen</button></div>`;
+    gemList.forEach((g, i) => {
+      const priceInfo = gemBazaarPrice(g.tier, g.type);
+      gemHtml += `<div class="enchant-opt"><label style="flex:1;"><span class="e-name">${escapeHTML(g.tier)} ${escapeHTML(g.type)} Gemstone</span>
+        ${priceInfo ? `<span class="e-price">${fmtCoins(priceInfo.price)}</span>` : `<span class="e-price na">niet gevonden</span>`}</label>
+        <button data-gem-del="${i}" class="chip-del" title="Verwijder">✕</button></div>`;
+    });
+    gemHtml += `</div>`;
+
+    let reforgeOptions = REFORGE_STONES.map((r,i) => `<option value="${i}">${r.name} (${r.reforge} — ${r.applies})</option>`).join('');
+    let reforgeHtml = `<div class="enchant-group"><div class="enchant-group-title">Reforge stones toevoegen</div>
+      <div class="npc-add-row"><select id="reforgePickSelect">${reforgeOptions}</select><button id="reforgeAddBtn">+ Toevoegen</button></div>`;
+    reforgeList.forEach((r, i) => {
+      reforgeHtml += `<div class="enchant-opt"><label style="flex:1;"><span class="e-name">${escapeHTML(r.name)}<span class="e-lvl">${escapeHTML(r.reforge)}</span></span>
+        ${r.npcPrice != null ? `<span class="e-price">${fmtCoins(r.npcPrice)}</span>` : `<span class="e-price na" title="${escapeHTML(r.source)}">niet kopen</span>`}</label>
+        <button data-reforge-del="${i}" class="chip-del" title="Verwijder">✕</button></div>`;
+    });
+    reforgeHtml += `<div class="hint" style="margin-top:6px;">Reforge stones zonder prijs zijn drops/dungeon-loot en niet gewoon te kopen — vermeld als referentie (bron in tooltip).</div></div>`;
+
+    return { gemHtml, reforgeHtml };
+  }
+
+  let enchantSelectedType = 'sword';
+  let enchantChoices = {};   // per type: { [groupKey]: chosenName }
+  let enchantChecked = {};   // per type: { [enchantName]: bool } for ungrouped ones
+  let enchantUltimate = {};  // per type: chosen ultimate name or '' (none)
+  let enchantLevel = {};     // per type: { [enchantName]: targetLevel }
+  let enchantCurrent = {};   // per type: { [enchantName]: currentLevel (0 = geen) }
+
+  function enchantSlug(name){
+    return name.toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  }
+  // Probeert de live bazaar-instant-koopprijs van een enchanted book te vinden door de
+  // itemnaam te "raden" naar het bazaar-product-ID-patroon (ENCHANTMENT_<NAAM>_<LEVEL>,
+  // of ENCHANTMENT_ULTIMATE_<NAAM>_<LEVEL> voor ultimates). Niet hardcoded — wordt altijd
+  // live geverifieerd tegen de daadwerkelijk geladen bazaarData, dus nooit een stale ID.
+  function guessBookPrice(ench, isUltimate, level){
+    if (!bazaarData) return null;
+    if (ench.manual) return null;
+    const lvl = level || ench.max;
+    const baseSlug = enchantSlug(ench.name);
+    const candidateSlugs = [baseSlug].concat(ench.aliases || []);
+    const idsToTry = [];
+    candidateSlugs.forEach(slug => {
+      if (isUltimate){
+        idsToTry.push(slug.startsWith('ULTIMATE_') ? `ENCHANTMENT_${slug}_${lvl}` : `ENCHANTMENT_ULTIMATE_${slug}_${lvl}`);
+      }
+      idsToTry.push(`ENCHANTMENT_${slug}_${lvl}`);
+    });
+    for (const id of idsToTry){
+      if (bazaarData[id] && bazaarData[id].sell_summary && bazaarData[id].sell_summary.length){
+        const p = bazaarData[id].sell_summary[0].pricePerUnit;
+        if (p) return { price: p, id };
+      }
+    }
+    return null;
+  }
+
+  function levelOptionsHtml(max, selected){
+    let html = '';
+    for (let i = 1; i <= max; i++){
+      html += `<option value="${i}" ${i === selected ? 'selected' : ''}>${romanNumeral(i)}</option>`;
+    }
+    return html;
+  }
+  function currentOptionsHtml(max, selected){
+    let html = `<option value="0" ${!selected ? 'selected' : ''}>—</option>`;
+    for (let i = 1; i <= max; i++){
+      html += `<option value="${i}" ${i === selected ? 'selected' : ''}>${romanNumeral(i)}</option>`;
+    }
+    return html;
+  }
+  function descIconHtml(name){
+    const d = ENCHANT_DESC[name];
+    return d ? `<span class="e-desc-icon" title="${escapeHTML(d)}">ⓘ</span>` : '';
+  }
+
+  function renderEnchantOptimizer(){
+    const typeSel = $('#enchantItemType');
+    if (typeSel && !typeSel.options.length){
+      typeSel.innerHTML = Object.keys(ENCHANT_TYPE_LABELS).map(k =>
+        `<option value="${k}">${ENCHANT_TYPE_LABELS[k]}</option>`).join('');
+      typeSel.value = enchantSelectedType;
+      typeSel.addEventListener('change', () => { enchantSelectedType = typeSel.value; renderEnchantOptimizer(); });
+    }
+    const type = enchantSelectedType;
+    const list = ENCHANT_DB[type] || [];
+    if (!enchantChoices[type]) enchantChoices[type] = {};
+    if (!enchantChecked[type]) enchantChecked[type] = {};
+    if (!enchantLevel[type]) enchantLevel[type] = {};
+    if (!enchantCurrent[type]) enchantCurrent[type] = {};
+    if (enchantUltimate[type] === undefined) enchantUltimate[type] = '';
+
+    // groepeer op conflictgroep
+    const groups = {}; // groupKey -> [enchant,...]
+    const solo = [];
+    list.forEach(e => {
+      if (e.group){
+        if (!groups[e.group]) groups[e.group] = [];
+        groups[e.group].push(e);
+      } else solo.push(e);
+    });
+    // default keuzes instellen indien nog niet gezet
+    Object.keys(groups).forEach(g => {
+      if (!enchantChoices[type][g]) enchantChoices[type][g] = groups[g][0].name;
+    });
+    list.forEach(e => {
+      if (!e.group && enchantChecked[type][e.name] === undefined) enchantChecked[type][e.name] = true;
+      if (!enchantLevel[type][e.name]) enchantLevel[type][e.name] = e.max;
+    });
+
+    let totalCost = 0;
+    const lines = []; // {name, price}
+    const upgradeCandidates = []; // {name, price, currentLvl, targetLvl}
+    let missingCount = 0;
+
+    // ench = data, name = actual chosen name (voor groepen kan dit afwijken van ench.name niet nodig, groep-items zijn zelf de ench)
+    function evalEnchant(ench, isUltimate){
+      const target = enchantLevel[type][ench.name] || ench.max;
+      const current = enchantCurrent[type][ench.name] || 0;
+      const info = guessBookPrice(ench, isUltimate, target);
+      const alreadyDone = current >= target && target > 0;
+      if (ench.manual){
+        return { priceHtml:`<span class="e-price na" title="${escapeHTML(ench.note||'')}">handmatig</span>`, alreadyDone };
+      }
+      if (!info){
+        missingCount++;
+        return { priceHtml:`<span class="e-price na">niet gevonden</span>`, alreadyDone };
+      }
+      if (alreadyDone){
+        return { priceHtml:`<span class="e-price" style="color:var(--green);">al ${romanNumeral(current)}</span>`, alreadyDone, price:info.price };
+      }
+      totalCost += info.price;
+      lines.push({ name: ench.name, price: info.price, target });
+      upgradeCandidates.push({ name: ench.name, price: info.price, current, target });
+      return { priceHtml:`<span class="e-price">${fmtCoins(info.price)}</span>`, alreadyDone, price:info.price };
+    }
+
+    function levelSelectsHtml(ench){
+      const target = enchantLevel[type][ench.name] || ench.max;
+      const current = enchantCurrent[type][ench.name] || 0;
+      if (ench.max <= 1) return '';
+      return `<select class="e-target-lvl" data-ench="${escapeHTML(ench.name)}" title="Gewenst level">${levelOptionsHtml(ench.max, target)}</select>
+        <select class="e-current-lvl" data-ench="${escapeHTML(ench.name)}" title="Wat heb je nu?">${currentOptionsHtml(ench.max, current)}</select>`;
+    }
+
+    let groupsHtml = '';
+    Object.keys(groups).sort().forEach(g => {
+      const opts = groups[g];
+      groupsHtml += `<div class="enchant-group"><div class="enchant-group-title">Kies er 1</div>`;
+      opts.forEach(e => {
+        const checked = enchantChoices[type][g] === e.name ? 'checked' : '';
+        const result = checked ? evalEnchant(e, false) : { priceHtml: (() => { const info = guessBookPrice(e, false, enchantLevel[type][e.name] || e.max); return info ? `<span class="e-price">${fmtCoins(info.price)}</span>` : `<span class="e-price na">niet gevonden</span>`; })() };
+        groupsHtml += `<div class="enchant-opt"><input type="radio" name="egroup_${escapeHTML(g)}" value="${escapeHTML(e.name)}" ${checked}>
+          <label><span class="e-name">${escapeHTML(e.name)}${descIconHtml(e.name)}</span></label>
+          ${checked ? levelSelectsHtml(e) : `<span class="e-lvl">${romanNumeral(e.max)} max</span>`}
+          ${result.priceHtml}</div>`;
+      });
+      groupsHtml += `</div>`;
+    });
+    if (solo.length){
+      groupsHtml += `<div class="enchant-group"><div class="enchant-group-title">Geen conflict — automatisch meegeteld (uitvinkbaar)</div>`;
+      solo.forEach(e => {
+        const checked = enchantChecked[type][e.name] ? 'checked' : '';
+        const result = checked ? evalEnchant(e, false) : { priceHtml: (() => { const info = guessBookPrice(e, false, enchantLevel[type][e.name] || e.max); return info ? `<span class="e-price">${fmtCoins(info.price)}</span>` : `<span class="e-price na">niet gevonden</span>`; })() };
+        groupsHtml += `<div class="enchant-opt"><input type="checkbox" data-solo="${escapeHTML(e.name)}" ${checked}>
+          <label><span class="e-name">${escapeHTML(e.name)}${descIconHtml(e.name)}</span></label>
+          ${checked ? levelSelectsHtml(e) : `<span class="e-lvl">${romanNumeral(e.max)} max</span>`}
+          ${result.priceHtml}</div>`;
+      });
+      groupsHtml += `</div>`;
+    }
+    // Ultimate-enchant selector
+    const applicableUltimates = ULTIMATE_DB.filter(u => u.cats.includes(type));
+    if (applicableUltimates.length){
+      groupsHtml += `<div class="enchant-group"><div class="enchant-group-title">Ultimate-enchant (max 1, optioneel)</div>`;
+      const noneChecked = !enchantUltimate[type] ? 'checked' : '';
+      groupsHtml += `<div class="enchant-opt"><input type="radio" name="eultimate" value="" ${noneChecked}><label><span class="e-name ultimate-none">Geen</span></label></div>`;
+      applicableUltimates.forEach(u => {
+        const checked = enchantUltimate[type] === u.name ? 'checked' : '';
+        const result = checked ? evalEnchant(u, true) : { priceHtml: (() => { const info = guessBookPrice(u, true, enchantLevel[type][u.name] || u.max); return info ? `<span class="e-price">${fmtCoins(info.price)}</span>` : `<span class="e-price na">niet gevonden</span>`; })() };
+        groupsHtml += `<div class="enchant-opt"><input type="radio" name="eultimate" value="${escapeHTML(u.name)}" ${checked}>
+          <label><span class="e-name">${escapeHTML(u.name)}${descIconHtml(u.name)}</span></label>
+          ${checked ? levelSelectsHtml(u) : `<span class="e-lvl">${romanNumeral(u.max)} max</span>`}
+          ${result.priceHtml}</div>`;
+      });
+      groupsHtml += `</div>`;
+    }
+
+    // gemstones & reforge stones
+    const { gemHtml, reforgeHtml } = renderGemReforgeSection();
+    let gemReforgeTotal = 0;
+    gemList.forEach(g => { const p = gemBazaarPrice(g.tier, g.type); if (p) gemReforgeTotal += p.price; });
+    reforgeList.forEach(r => { if (r.npcPrice != null) gemReforgeTotal += r.npcPrice; });
+    totalCost += gemReforgeTotal;
+    groupsHtml += gemHtml + reforgeHtml;
+
+    const groupsEl = $('#enchantGroups');
+    groupsEl.innerHTML = groupsHtml;
+    groupsEl.querySelectorAll('input[type="radio"][name^="egroup_"]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const g = inp.name.replace(/^egroup_/, '');
+        enchantChoices[type][g] = inp.value;
+        renderEnchantOptimizer();
+      });
+    });
+    groupsEl.querySelectorAll('input[type="checkbox"][data-solo]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        enchantChecked[type][inp.dataset.solo] = inp.checked;
+        renderEnchantOptimizer();
+      });
+    });
+    groupsEl.querySelectorAll('input[type="radio"][name="eultimate"]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        enchantUltimate[type] = inp.value;
+        renderEnchantOptimizer();
+      });
+    });
+    groupsEl.querySelectorAll('.e-target-lvl').forEach(sel => {
+      sel.addEventListener('change', () => { enchantLevel[type][sel.dataset.ench] = Number(sel.value); renderEnchantOptimizer(); });
+    });
+    groupsEl.querySelectorAll('.e-current-lvl').forEach(sel => {
+      sel.addEventListener('change', () => { enchantCurrent[type][sel.dataset.ench] = Number(sel.value); renderEnchantOptimizer(); });
+    });
+    const gemSelectEl = $('#gemPickSelect');
+    const gemAddBtn = $('#gemAddBtn');
+    if (gemAddBtn) gemAddBtn.addEventListener('click', () => {
+      const [tier, gtype] = gemSelectEl.value.split('|');
+      gemList.push({ tier, type: gtype });
+      renderEnchantOptimizer();
+    });
+    groupsEl.querySelectorAll('[data-gem-del]').forEach(btn => {
+      btn.addEventListener('click', () => { gemList.splice(Number(btn.dataset.gemDel), 1); renderEnchantOptimizer(); });
+    });
+    const reforgeSelectEl = $('#reforgePickSelect');
+    const reforgeAddBtn = $('#reforgeAddBtn');
+    if (reforgeAddBtn) reforgeAddBtn.addEventListener('click', () => {
+      const r = REFORGE_STONES[Number(reforgeSelectEl.value)];
+      reforgeList.push(r);
+      renderEnchantOptimizer();
+    });
+    groupsEl.querySelectorAll('[data-reforge-del]').forEach(btn => {
+      btn.addEventListener('click', () => { reforgeList.splice(Number(btn.dataset.reforgeDel), 1); renderEnchantOptimizer(); });
+    });
+
+    // "beste upgrade" — de goedkoopste enchant die je nog niet op het gewenste level hebt
+    upgradeCandidates.sort((a,b) => a.price - b.price);
+    const bestUpgrade = upgradeCandidates[0];
+
+    const summaryEl = $('#enchantSummary');
+    let linesHtml = lines.map(l => `<div class="e-line"><span class="e-lname">${escapeHTML(l.name)} ${romanNumeral(l.target)}</span><span>${fmtCoins(l.price)}</span></div>`).join('');
+    if (gemList.length || reforgeList.length){
+      linesHtml += `<div class="e-line"><span class="e-lname">/Gems + reforge</span><span>${fmtCoins(gemReforgeTotal)}</span></div>`;
+    }
+    if (!linesHtml) linesHtml = `<div class="e-line"><span class="e-lname">—</span><span>—</span></div>`;
+    summaryEl.innerHTML = `
+      <h4>Totale max-kost</h4>
+      <div class="e-total">${bazaarData ? fmtCoins(totalCost) + ' coins' : '—'}</div>
+      <div class="e-total-sub">${ENCHANT_TYPE_LABELS[type] || type} — som van instant-koopprijzen op de bazaar</div>
+      ${linesHtml}
+      ${bestUpgrade ? `<div class="e-missing" style="color:var(--green);">Beste volgende upgrade: <b>${escapeHTML(bestUpgrade.name)}</b> naar ${romanNumeral(bestUpgrade.target)} voor ${fmtCoins(bestUpgrade.price)} — dit is de goedkoopste stap richting je gekozen build.</div>` : ''}
+      ${missingCount > 0 ? `<div class="e-missing">${missingCount} enchant(s) niet gevonden op de bazaar (naam wijkt af, of alleen via drops/AH verkrijgbaar) — telt niet mee in het totaal.</div>` : ''}
+    `;
+  }
+  function romanNumeral(n){
+    const map = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    let s = '', v = n;
+    for (const [val, sym] of map){ while (v >= val){ s += sym; v -= val; } }
+    return s || String(n);
+  }
+
+  // ---------- AH ↔ Bazaar arbitrage ----------
+  // For a watchlist item that ALSO trades on the bazaar: is the cheapest BIN on the
+  // Auction House lower than what you'd get selling it right now on the bazaar? If so
+  // that's a near-instant, low-risk flip (buy the BIN, immediately sell on the bazaar).
+  // A minimum absolute + relative threshold filters out noise from tiny discrepancies
+  // and (since we can't see the AH listing's stack size) keeps false positives down.
+  const ARB_MIN_PROFIT = 50;       // coins/unit
+  const ARB_MIN_PROFIT_PCT = 2;    // %
+  function computeArbitrage(w, r){
+    if (!w.displayName || !r || !r.bestBin) return null;
+    const bazaarSellPrice = getCurrentSellPrice(w.displayName);
+    if (bazaarSellPrice === null) return null;
+    const netBazaarSell = bazaarSellPrice * (1 - flipperTaxRate);
+    const profit = netBazaarSell - r.bestBin.price;
+    if (profit < ARB_MIN_PROFIT) return null;
+    const profitPct = r.bestBin.price > 0 ? (profit / r.bestBin.price) * 100 : 0;
+    if (profitPct < ARB_MIN_PROFIT_PCT) return null;
+    return { profit, profitPct, bazaarSellPrice, netBazaarSell, binPrice: r.bestBin.price };
+  }
+
+  // ---------- AH flip-scanner (hele AH, alleen bazaar-achtige/stapelbare items) ----------
+  // Twee onafhankelijke signalen per item, gebaseerd op de twee laagste BIN's die
+  // processAuctionPage al tijdens de scan verzamelde (zie globalBins):
+  //  1. "relist": de laagste BIN is duidelijk goedkoper dan de eerstvolgende BIN van
+  //     hetzelfde item — koop 'm, zet 'm terug op de AH voor de normale prijs.
+  //  2. "arb": de laagste BIN is goedkoper dan wat je er nu voor krijgt op de bazaar —
+  //     zelfde logica als de watchlist-arbitrage, maar dan voor de hele AH.
+  const AH_FLIP_MIN_DISCOUNT_PCT = 15; // laagste BIN moet minstens dit % goedkoper zijn dan de volgende
+  const AH_FLIP_MIN_PROFIT = 500;      // coins, ongeacht welk signaal
+  function computeAhFlips(globalBins){
+    const out = [];
+    for (const id in (globalBins || {})){
+      const g = globalBins[id];
+      if (!g || !g.min1) continue;
+      const display = getItemDisplay(id);
+      let relist = null;
+      if (g.min2 && g.min2.price > 0){
+        const profit = g.min2.price - g.min1.price;
+        const discountPct = (profit / g.min2.price) * 100;
+        if (profit >= AH_FLIP_MIN_PROFIT && discountPct >= AH_FLIP_MIN_DISCOUNT_PCT){
+          relist = { profit, discountPct, refPrice: g.min2.price };
+        }
+      }
+      let arb = null;
+      const bazaarSellPrice = getCurrentSellPrice(display.name);
+      if (bazaarSellPrice !== null){
+        const netBazaarSell = bazaarSellPrice * (1 - flipperTaxRate);
+        const profit = netBazaarSell - g.min1.price;
+        const discountPct = g.min1.price > 0 ? (profit / g.min1.price) * 100 : 0;
+        if (profit >= AH_FLIP_MIN_PROFIT && discountPct >= ARB_MIN_PROFIT_PCT){
+          arb = { profit, discountPct, refPrice: netBazaarSell, bazaarSellPrice };
+        }
+      }
+      if (!relist && !arb) continue;
+      const bestProfit = Math.max(relist ? relist.profit : -Infinity, arb ? arb.profit : -Infinity);
+      out.push({
+        id, name: display.name, icon: display.icon,
+        binPrice: g.min1.price, remaining: g.min1.remaining,
+        relist, arb, bestProfit
+      });
+    }
+    out.sort((a,b) => b.bestProfit - a.bestProfit);
+    return out;
+  }
+
+  function renderAhFlipper(){
+    const el = $('#aucFlipperTableWrap');
+    if (!el) return;
+    if (ahFlips.length === 0){
+      el.innerHTML = `<div class="empty-state">Geen AH flip-kansen gevonden in de laatste scan. Dat is normaal — de meeste spelers verkopen bazaar-achtige items via de bazaar zelf, dus dit zijn de uitzonderingen. Probeer het later opnieuw, of scan vaker met "Automatisch elke 10s scannen".</div>`;
+      return;
+    }
+    const rows = ahFlips.map(f => {
+      const badges = (f.relist ? `<span class="ah-flip-badge relist" title="Volgende goedkoopste BIN van dit item: ${fmtCoins(f.relist.refPrice)}">Herverkoop AH (+${fmtCoins(f.relist.profit)}, -${f.relist.discountPct.toFixed(0)}%)</span>` : '')
+        + (f.arb ? `<span class="ah-flip-badge arb" title="Huidige bazaar-verkoopprijs netto: ${fmtCoins(f.arb.refPrice)}">Bazaar-arbitrage (+${fmtCoins(f.arb.profit)}, -${f.arb.discountPct.toFixed(0)}%)</span>` : '');
+      return `<tr>
+        <td class="left"><span class="item-name">${escapeHTML(f.name)}</span><span class="item-id">${escapeHTML(f.id)}</span></td>
+        <td>${fmtCoins(f.binPrice)}</td>
+        <td>${fmtDuration(f.remaining)}</td>
+        <td>${badges}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr>
+        <th class="left">Item</th><th>Laagste BIN</th><th>Tijd over</th><th>Kans</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="trade-note" style="margin-top:10px;">Exclusief AH-plaatsingskosten voor herverkoop. Een BIN kan al gekocht zijn tegen de tijd dat je 'm opent — check altijd zelf in-game voor je erop rekent.</p>`;
+  }
+
+  // ---------- NPC-verkoop scanner (bazaar + AH samen) ----------
+  // Bazaar-kant: live, elke keer opnieuw berekend uit de actuele bazaarData (net als de
+  // NPC-flip-rijen in Bazaar Flips, maar hier los van budget/categorie-filters).
+  function computeNpcBazaarOpportunities(){
+    const out = [];
+    if (!bazaarData) return out;
+    for (const id in npcPrices){
+      const p = bazaarData[id];
+      if (!p) continue;
+      const qs = p.quick_status;
+      const sellSummary = p.sell_summary || [];
+      if (!qs || sellSummary.length === 0) continue;
+      if (!isHealthyMarket(p, qs)) continue; // altijd de manipulatie-check toepassen, geen toggle hier
+      const top = sellSummary[0];
+      const npcPrice = npcPrices[id];
+      if (!top || !(top.pricePerUnit > 0) || top.pricePerUnit >= npcPrice) continue;
+      const display = getItemDisplay(id);
+      const profitPerUnit = npcPrice - top.pricePerUnit;
+      out.push({
+        id, name: display.name, icon: display.icon, source: 'bazaar',
+        buyPrice: top.pricePerUnit, npcPrice, profitPerUnit,
+        marginPct: (profitPerUnit / top.pricePerUnit) * 100,
+        qtyAvailable: top.amount || 0
+      });
+    }
+    return out;
+  }
+  // AH-kant: gebaseerd op de laagste BIN uit de laatste volledige scan (lastGlobalBins) —
+  // wordt dus alleen bijgewerkt als er ook echt gescand is.
+  function computeNpcAhOpportunities(globalBins){
+    const out = [];
+    for (const id in npcPrices){
+      const g = globalBins && globalBins[id];
+      if (!g || !g.min1) continue;
+      const npcPrice = npcPrices[id];
+      if (g.min1.price >= npcPrice) continue;
+      const display = getItemDisplay(id);
+      const profitPerUnit = npcPrice - g.min1.price;
+      out.push({
+        id, name: display.name, icon: display.icon, source: 'auction',
+        buyPrice: g.min1.price, npcPrice, profitPerUnit,
+        marginPct: (profitPerUnit / g.min1.price) * 100,
+        remaining: g.min1.remaining
+      });
+    }
+    return out;
+  }
+  function renderNpcScannerTab(){
+    const el = $('#npcScanTableWrap');
+    if (!el) return;
+    const rows = [...computeNpcBazaarOpportunities(), ...computeNpcAhOpportunities(lastGlobalBins)];
+    rows.sort((a,b) => b.profitPerUnit - a.profitPerUnit);
+    if (rows.length === 0){
+      el.innerHTML = `<div class="empty-state">Geen NPC-verkoopkansen gevonden. Voeg eventueel meer NPC-prijzen toe onder Instellingen (Uitleg-tabblad) als je een item mist, of scan de Auction House voor het AH-gedeelte.</div>`;
+      return;
+    }
+    const html = rows.map(r => {
+      const sourceBadge = r.source === 'bazaar'
+        ? `<span class="ah-flip-badge arb">Bazaar</span>`
+        : `<span class="ah-flip-badge relist">AH${r.remaining!==undefined?` · ${fmtDuration(r.remaining)}`:''}</span>`;
+      const extra = r.source === 'bazaar' ? `${fmtInt(r.qtyAvailable)} beschikbaar` : '';
+      return `<tr>
+        <td class="left"><span class="item-name">${escapeHTML(r.name)}</span><span class="item-id">${escapeHTML(r.id)}</span></td>
+        <td>${sourceBadge}</td>
+        <td>${fmtCoins(r.buyPrice)}</td>
+        <td>${fmtCoins(r.npcPrice)}</td>
+        <td class="${profitClass(r.profitPerUnit)}">${fmtCoins(r.profitPerUnit)} (${r.marginPct.toFixed(0)}%)</td>
+        <td>${extra}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr>
+        <th class="left">Item</th><th>Bron</th><th>Koopprijs</th><th>NPC-prijs</th><th>Winst/stuk</th><th></th>
+      </tr></thead><tbody>${html}</tbody></table></div>
+      <p class="trade-note" style="margin-top:10px;">Bazaar-koopprijs = instant-koopprijs nu; AH-koopprijs = laagste BIN uit de laatste scan. Geen flipper tax van toepassing (je verkoopt aan een NPC, niet op de bazaar).</p>`;
+  }
+
+  // ---------- item images (best-effort — vanilla Minecraft item textures via a public,
+  // CORS-open CDN, keyed by the item's Minecraft "material"). Player-head-style items
+  // (custom-textured skulls) are skipped since the generic skull texture would be
+  // misleading — those just fall back to the category emoji instead. Any image that
+  // fails to load is hidden client-side (onerror), never breaks the layout. ----------
+  const ITEM_ICON_BASE = 'https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/master/data/1.18.1/items/';
+  const NO_ICON_MATERIALS = new Set(['PLAYER_HEAD','SKULL_ITEM','MOB_SPAWNER']);
+  function getItemIconUrl(material){
+    if (!material || NO_ICON_MATERIALS.has(material)) return null;
+    return ITEM_ICON_BASE + material.toLowerCase() + '.png';
+  }
+  // resolve a typed watchlist term to a known item: matches either a skyblock item ID
+  // (e.g. "HYPERION", "enchanted_book") or falls straight through as a free-text name
+  // search. Returns {searchTerm, displayName, iconUrl} — searchTerm is what we match
+  // against auction item_name strings with.
+  function resolveAuctionTerm(raw){
+    const norm = raw.trim().toUpperCase().replace(/[\s'-]+/g, '_');
+    const meta = itemMeta[norm];
+    if (meta){
+      return {
+        searchTerm: meta.name || niceItemName(norm),
+        displayName: meta.name || niceItemName(norm),
+        iconUrl: getItemIconUrl(meta.material)
+      };
+    }
+    // no ID match — treat the raw input as a free-text name search, but still try to
+    // find a matching item (by display name) so we can show an icon if possible
+    const rawLower = raw.trim().toLowerCase();
+    for (const id in itemMeta){
+      const m = itemMeta[id];
+      if (m.name && m.name.toLowerCase() === rawLower){
+        return { searchTerm: raw.trim(), displayName: m.name, iconUrl: getItemIconUrl(m.material) };
+      }
+    }
+    return { searchTerm: raw.trim(), displayName: raw.trim(), iconUrl: null };
+  }
+
+  function applyData(json){
+    bazaarData = json.products;
+    lastUpdated = json.lastUpdated ? new Date(json.lastUpdated) : new Date();
+    setStatus('ok', 'Live — laatste update ' + lastUpdated.toLocaleTimeString('nl-NL'));
+    if (itemMetaLoaded) populateCategoryFilters();
+    renderBazaarTab();
+    renderCraftTab();
+    // keep "huidige marktprijs" in Mijn Trades live too — a lightweight, targeted DOM
+    // update (not a full renderTradeLog) so it never clobbers text you're mid-typing
+    // into an open sell form.
+    if (typeof refreshTradePriceComparisons === 'function') refreshTradePriceComparisons();
+    if (typeof renderNpcScannerTab === 'function') renderNpcScannerTab();
+    if (typeof renderEnchantOptimizer === 'function') renderEnchantOptimizer();
+  }
+
+  function setStatus(kind, text){
+    const dot = $('#statusDot');
+    dot.className = 'dot' + (kind==='err' ? ' err' : kind==='loading' ? ' loading' : '');
+    $('#statusText').textContent = text;
+  }
+
+  function renderError(errors){
+    const detail = (errors && errors.length) ? `<br><span style="font-size:11px;opacity:.7;">${errors.join(' · ')}</span>` : '';
+    $('#bazaarTableWrap').innerHTML = `<div class="error-state">Kon geen live data ophalen — alle databronnen (direct + proxies) faalden. Dit kan door een tijdelijke storing bij een proxy komen.${detail}<br><button id="retryBtn">Opnieuw proberen</button></div>`;
+    $('#craftTableWrap').innerHTML = `<div class="error-state">Kon geen live data ophalen.</div>`;
+    $('#bazaarRecommend').innerHTML = '';
+    $('#craftRecommend').innerHTML = '';
+    const rb = document.getElementById('retryBtn');
+    if (rb) rb.addEventListener('click', fetchBazaar);
+  }
+
+  // ---------- market health / anti-manipulation checks ----------
+  function tierJumpOk(summary){
+    if (!summary || summary.length < 2) return true; // handled separately by MIN_PRICE_TIERS
+    const p0 = summary[0].pricePerUnit, p1 = summary[1].pricePerUnit;
+    if (!p1) return true;
+    return Math.abs(p0 - p1) / p1 <= MAX_TOP_TIER_JUMP;
+  }
+  function isHealthyMarket(product, qs){
+    const sellSummary = product.sell_summary || [];
+    const buySummary = product.buy_summary || [];
+    const ordersOk = (qs.sellOrders||0) >= MIN_ORDERS_PER_SIDE && (qs.buyOrders||0) >= MIN_ORDERS_PER_SIDE;
+    const tiersOk = sellSummary.length >= MIN_PRICE_TIERS && buySummary.length >= MIN_PRICE_TIERS;
+    const jumpOk = tierJumpOk(sellSummary) && tierJumpOk(buySummary);
+    const backlogCoins = (qs.sellPrice||0) * (qs.sellVolume||0) + (qs.buyPrice||0) * (qs.buyVolume||0);
+    const backlogOk = backlogCoins >= MIN_BACKLOG_COINS;
+    return ordersOk && tiersOk && jumpOk && backlogOk;
+  }
+
+  // ---------- order-book walking ----------
+  // Instead of trusting the single top-of-book / weighted quick_status price (which a
+  // single spoofed order can skew badly on thin items), we walk through the actual
+  // order tiers to compute the REAL average price you'd pay/receive for a given
+  // quantity — capped by an optional max quantity and/or max coin budget. This both
+  // fixes unrealistic recommendations on manipulated items and lets a small/rare
+  // fake order get diluted away once you ask for a meaningful quantity.
+  function walkBook(summary, maxQty, maxBudget){
+    const qtyLimit = (maxQty === null || maxQty === undefined || maxQty <= 0) ? Infinity : maxQty;
+    const budgetLimit = (maxBudget === null || maxBudget === undefined || maxBudget <= 0) ? Infinity : maxBudget;
+    let remainingQty = qtyLimit;
+    let remainingBudget = budgetLimit;
+    let filled = 0, totalCost = 0;
+    for (const tier of (summary || [])){
+      if (remainingQty <= 0 || remainingBudget <= 0) break;
+      if (!tier || !tier.pricePerUnit || tier.pricePerUnit <= 0) continue;
+      let take = Math.min(remainingQty, tier.amount || 0);
+      let tierCost = take * tier.pricePerUnit;
+      if (tierCost > remainingBudget){
+        take = Math.floor(remainingBudget / tier.pricePerUnit);
+        tierCost = take * tier.pricePerUnit;
+      }
+      if (take <= 0) continue;
+      filled += take;
+      totalCost += tierCost;
+      remainingQty -= take;
+      remainingBudget -= tierCost;
+    }
+    return { filled, totalCost, avgPrice: filled > 0 ? totalCost / filled : 0 };
+  }
+
+  // Look substantially deeper into the book than we actually need, to catch a
+  // "wall" of stacked fake orders that's just deep enough to survive a shallow
+  // walk. If the price shifts sharply once you look past what we filled, the
+  // near-top price we used is propped up rather than a real, sustained price.
+  function hasPriceCliff(summary, filledQty, filledAvgPrice){
+    if (!filledQty || !filledAvgPrice) return false;
+    const probeQty = Math.max(filledQty * CLIFF_PROBE_MULTIPLIER, CLIFF_PROBE_MIN_QTY);
+    const probe = walkBook(summary, probeQty, Infinity);
+    if (probe.filled < filledQty * 1.2) return false; // not enough extra depth to judge — don't flag on thin books alone
+    if (!probe.avgPrice) return false;
+    const deviation = Math.abs(filledAvgPrice - probe.avgPrice) / filledAvgPrice;
+    return deviation > CLIFF_DEVIATION;
+  }
+
+  // ---------- stability-over-time tracking ----------
+  // Compares this refresh's price against the last refresh's for the same item. A
+  // consistent price across several 5-second refreshes is a strong signal this is a
+  // real, standing order rather than a bait order that gets pulled seconds after
+  // appearing. Returns {streak, stable}.
+  function trackStability(historyMap, id, priceA, priceB, marginPct){
+    const prev = historyMap[id];
+    const closeEnough = (a, b) => (a>0 && b>0) ? Math.abs(a-b)/b <= STABILITY_TOLERANCE : false;
+    let streak = 1;
+    if (prev && closeEnough(prev.priceA, priceA) && closeEnough(prev.priceB, priceB)){
+      streak = prev.streak + 1;
+    }
+    // keep a short rolling history of margin% across refreshes — powers the "verloop"
+    // sparkline so you can see at a glance whether a margin has been consistently good
+    // or just spiked this one refresh, without having to sit and watch it yourself.
+    const history = (prev && prev.history) ? prev.history.slice() : [];
+    if (marginPct !== undefined && marginPct !== null && !isNaN(marginPct)){
+      history.push(marginPct);
+      if (history.length > SPARKLINE_MAX_POINTS) history.shift();
+    }
+    historyMap[id] = { streak, priceA, priceB, history };
+    return { streak, stable: streak >= STABILITY_MIN_STREAK, history };
+  }
+
+  // tiny inline SVG sparkline of recent margin% readings — neutral blue line, with the
+  // most recent point tinted green/red depending on whether it's trending up or down
+  // versus the start of the visible window. Not enough data yet → a flat dash instead.
+  function renderSparkline(history){
+    if (!history || history.length < 2){
+      return `<span class="spark-empty">—</span>`;
+    }
+    const W = 56, H = 20, pad = 2;
+    const min = Math.min(...history), max = Math.max(...history);
+    const range = (max - min) || 1;
+    const x = i => pad + (i/(history.length-1)) * (W - pad*2);
+    const y = v => H - pad - ((v - min) / range) * (H - pad*2);
+    const points = history.map((v,i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const trendUp = history[history.length-1] >= history[0];
+    const lastColor = trendUp ? 'var(--green)' : 'var(--red)';
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="sparkline" title="Margin% laatste ${history.length} refreshes: ${history.map(v=>v.toFixed(1)+'%').join(' → ')}">
+      <polyline points="${points}" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+      <circle cx="${x(history.length-1).toFixed(1)}" cy="${y(history[history.length-1]).toFixed(1)}" r="2" fill="${lastColor}"/>
+    </svg>`;
+  }
+
+  // ---------- bazaar flip computation ----------
+  // Prices/quantities are computed by actually walking the sell/buy order book for the
+  // requested budget + max-quantity, not by trusting the raw top-of-book price. That
+  // means a single inflated/spoofed order gets diluted into the average once you ask
+  // for a realistic quantity, instead of skewing the whole recommendation.
+  function computeBazaarRows(maxQty, budget, category){
+    if (!bazaarData) return [];
+    const applyTax = $('#bazaarTax').checked;
+    const safeOnly = $('#bazaarSafe').checked;
+    const rows = [];
+    for (const id in bazaarData){
+      const p = bazaarData[id];
+      const qs = p.quick_status;
+      if (!qs) continue;
+      if (category && (!itemMeta[id] || itemMeta[id].category !== category)) continue;
+      const sellSummary = p.sell_summary || [];
+      const buySummary = p.buy_summary || [];
+
+      // NPC zero-risk check — independent of the bazaar round-trip flip below: buy on
+      // the bazaar, sell straight to an NPC in-game for a fixed price. Only checked for
+      // items the user explicitly entered a known NPC price for (see Instellingen).
+      if (npcPrices[id] !== undefined && sellSummary.length > 0 && (!safeOnly || isHealthyMarket(p, qs))){
+        const top = sellSummary[0];
+        const npcPrice = npcPrices[id];
+        if (top && top.pricePerUnit > 0 && top.pricePerUnit < npcPrice){
+          const cappedByBudget = budget > 0 ? Math.floor(budget / top.pricePerUnit) : Infinity;
+          const cappedByMaxQty = maxQty > 0 ? maxQty : Infinity;
+          const qty = Math.min(top.amount || 0, cappedByBudget, cappedByMaxQty);
+          if (qty > 0){
+            const profitPerUnit = npcPrice - top.pricePerUnit;
+            const npcMarginPct = (profitPerUnit / top.pricePerUnit) * 100;
+            const display = getItemDisplay(id);
+            const npcStab = trackStability(npcStability, id, top.pricePerUnit, npcPrice, npcMarginPct);
+            rows.push({
+              id, name: display.name, icon: display.icon,
+              avgBuyPrice: top.pricePerUnit, avgSellPrice: npcPrice,
+              profitPerUnit, marginPct: npcMarginPct, weekVol: qs.sellMovingWeek || 0,
+              units: qty, totalCost: qty * top.pricePerUnit, totalProfit: qty * profitPerUnit,
+              partial: qty < (top.amount || 0),
+              streak: npcStab.streak, stable: npcStab.stable, marginHistory: npcStab.history,
+              npcFlip: true
+            });
+          }
+        }
+      }
+
+      if (sellSummary.length === 0 || buySummary.length === 0) continue;
+      if (safeOnly && !isHealthyMarket(p, qs)) continue;
+
+      const buyFill = walkBook(sellSummary, maxQty, budget);   // buying the item to acquire it
+      if (buyFill.filled <= 0) continue;
+      const sellFill = walkBook(buySummary, buyFill.filled, Infinity); // selling what we bought
+      if (sellFill.filled <= 0) continue;
+
+      const units = sellFill.filled; // only count the matched portion both sides could fill
+      const totalCost = units * buyFill.avgPrice;
+      let totalRevenue = sellFill.totalCost;
+      if (applyTax) totalRevenue = totalRevenue * (1 - flipperTaxRate);
+      const totalProfit = totalRevenue - totalCost;
+      const marginPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+      const weekVol = Math.min(qs.sellMovingWeek||0, qs.buyMovingWeek||0);
+      const partial = units < buyFill.filled || (maxQty > 0 && units < maxQty);
+
+      if (safeOnly){
+        if (marginPct > MAX_SANE_MARGIN_PCT) continue; // unrealistic margin — almost always bait/manipulation/stale data
+        if (hasPriceCliff(sellSummary, buyFill.filled, buyFill.avgPrice)) continue;
+        if (hasPriceCliff(buySummary, sellFill.filled, sellFill.avgPrice)) continue;
+      }
+
+      const display = getItemDisplay(id);
+      const stability = trackStability(bazaarStability, id, buyFill.avgPrice, sellFill.avgPrice, marginPct);
+
+      rows.push({
+        id, name: display.name, icon: display.icon,
+        avgBuyPrice: buyFill.avgPrice, avgSellPrice: sellFill.avgPrice,
+        profitPerUnit: units > 0 ? totalProfit/units : 0,
+        marginPct, weekVol, units, totalCost, totalProfit, partial,
+        streak: stability.streak, stable: stability.stable, marginHistory: stability.history
+      });
+    }
+    return rows;
+  }
+
+  function renderBazaarTab(){
+    const search = $('#bazaarSearch').value.trim().toLowerCase();
+    const minVol = parseFloat($('#bazaarMinVol').value) || 0;
+    const budget = parseFloat($('#bazaarBudget').value) || 0;
+    const maxQty = parseFloat($('#bazaarMaxQty').value) || 0;
+    const category = $('#bazaarCategory').value;
+
+    let rows = computeBazaarRows(maxQty, budget, category);
+    // NPC-flips zijn risicovrij ongeacht het weekvolume, dus die laten we niet wegfilteren
+    rows = rows.filter(r => (r.npcFlip || r.weekVol >= minVol) && r.totalProfit > 0);
+    if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search) || r.id.toLowerCase().includes(search));
+
+    sortRows(rows, bazaarSort);
+    // NPC-flips altijd bovenaan tonen ("felgroen bovenaan je lijst"), los van de gekozen sortering
+    const npcRows = rows.filter(r => r.npcFlip).sort((a,b) => b.totalProfit - a.totalProfit);
+    const otherRows = rows.filter(r => !r.npcFlip);
+    rows = npcRows.concat(otherRows);
+    $('#bazaarCount').textContent = rows.length + ' flip-kansen gevonden' + (npcRows.length > 0 ? ` (waarvan ${npcRows.length} NPC-flip${npcRows.length>1?'s':''})` : '');
+    renderBazaarRecommendation(rows, budget, maxQty);
+
+    if (rows.length === 0){
+      $('#bazaarTableWrap').innerHTML = `<div class="empty-state">Geen resultaten met de huidige filters. Verlaag het minimum volume, zet de manipulatie-filter uit, of pas je zoekterm/max aantal/categorie aan.</div>`;
+      return;
+    }
+
+    const cols = [
+      {key:'name', label:'Item', left:true, icon:true},
+      {key:'avgBuyPrice', label:'Gem. koopprijs', fmt:fmtCoins},
+      {key:'avgSellPrice', label:'Gem. verkoopprijs', fmt:fmtCoins},
+      {key:'profitPerUnit', label:'Winst/stuk', fmt:fmtCoins, cls:profitClass},
+      {key:'marginPct', label:'Margin %', fmt:marginBadge, raw:true},
+      {key:'weekVol', label:'Vol/week', fmt:volTag, raw:true},
+      {key:'units', label:'Realistisch #stuks', fmt:fmtInt},
+      {key:'totalProfit', label:'Tot. winst', fmt:fmtCoins, cls:profitClass},
+      {key:'streak', label:'Stabiliteit', fmt:stabBadge, raw:true},
+      {key:'marginHistory', label:'Verloop', fmt:renderSparkline, raw:true, sortable:false},
+    ];
+    renderTable('#bazaarTableWrap', rows, cols, bazaarSort, (col)=>{
+      toggleSort(bazaarSort, col); renderBazaarTab();
+    }, (row) => {
+      addToTradeLog({
+        type: 'bazaar',
+        boughtItem: row.name, boughtQty: row.units, cost: row.totalCost,
+        soldItem: row.name, soldQty: row.units, revenue: null,
+        targetPricePerUnit: row.avgSellPrice, targetProfit: row.totalProfit
+      });
+    });
+  }
+
+  function renderBazaarRecommendation(rows, budget, maxQty){
+    const candidates = rows.filter(r => r.units > 0 && r.totalProfit > 0);
+    candidates.sort((a,b) => b.totalProfit - a.totalProfit);
+    const el = $('#bazaarRecommend');
+    if (candidates.length === 0){
+      el.innerHTML = `<div class="recommend empty"><div class="rec-body">
+        <div class="rec-title">Geen duidelijke aanbeveling</div>
+        <div class="rec-text">Met €${fmtCoins(budget)} coins en de huidige filters is er geen flip die genoeg marktdiepte heeft. Verhoog je budget/max aantal, verlaag het volumefilter, of zet de manipulatie-filter uit.</div>
+      </div></div>`;
+      return;
+    }
+    // prefer a candidate that's proven stable over several refreshes; fall back to the
+    // best unstable one with a clear "not yet confirmed" warning instead of blind trust
+    const stableCandidates = candidates.filter(r => r.stable);
+    const top = stableCandidates.length > 0 ? stableCandidates[0] : candidates[0];
+    const isUnsure = !top.stable;
+    const partialNote = top.partial ? ` <span style="color:var(--text-faint)">(orderboek/limiet begrensd dit aantal)</span>` : '';
+    const unsureNote = isUnsure
+      ? `<br><span style="color:var(--accent)">⏳ Nog niet bevestigd — dit item is nog geen ${STABILITY_MIN_STREAK} refreshes op rij stabiel gebleken. Wacht liever nog even, of check zelf extra goed in-game voordat je dit uitvoert.</span>`
+      : '';
+    el.innerHTML = `<div class="recommend${isUnsure?' unsure':''}"><div class="rec-body">
+      <div class="rec-title">${isUnsure?'Beste (nog onbevestigde) keuze':'Beste keuze met jouw budget'}${maxQty>0? ' (max '+fmtInt(maxQty)+' stuks)':''}</div>
+      <div class="rec-text">Koop <b>${fmtInt(top.units)}x ${top.icon} ${escapeHTML(top.name)}</b> voor gemiddeld <b>${fmtCoins(top.avgBuyPrice)}</b> coins/stuk (totaal ≈ <b>${fmtCoins(top.totalCost)}</b> coins) en verkoop ze weer voor gemiddeld <b>${fmtCoins(top.avgSellPrice)}</b> coins/stuk.${partialNote}
+      Verwachte winst: <b>${fmtCoins(top.totalProfit)}</b> coins (margin ${fmtPct(top.marginPct)}, vol/week ${fmtInt(top.weekVol)}). Dit is de gemiddelde prijs over het echte orderboek, niet alleen de bovenste (mogelijk gemanipuleerde) order.${unsureNote}</div>
+      <button id="bazaarRecToLogBtn" style="margin-top:10px;">Zet in Mijn Trades</button>
+    </div></div>`;
+    $('#bazaarRecToLogBtn').addEventListener('click', () => {
+      // logged as "open" (bought, not yet sold) — fill in the real sale price in the
+      // Mijn Trades tab once you've actually sold it in-game
+      addToTradeLog({
+        type: 'bazaar',
+        boughtItem: top.name, boughtQty: top.units, cost: top.totalCost,
+        soldItem: top.name, soldQty: top.units, revenue: null,
+        targetPricePerUnit: top.avgSellPrice, targetProfit: top.totalProfit
+      });
+    });
+  }
+
+  // ---------- craft / compact flip computation ----------
+  // Same order-book-walking approach as the bazaar tab: we don't trust the raw
+  // top-of-book price, we simulate actually buying 160×crafts raw materials and
+  // selling that many enchanted items through the real order tiers.
+  function computeCraftRows(maxCrafts, budget, category, maxRawInput){
+    if (!bazaarData) return [];
+    const applyTax = $('#craftTax').checked;
+    const safeOnly = $('#craftSafe').checked;
+    const rows = [];
+    // two independent ways to cap how much raw material gets bought: "max crafts" (in
+    // units of 160) or "max grondstof" (direct raw quantity) — whichever is set and
+    // more restrictive wins. 0 means "no limit" for either.
+    const craftsLimit = (maxCrafts > 0) ? maxCrafts * 160 : 0;
+    const rawLimit = (maxRawInput > 0) ? maxRawInput : 0;
+    const limits = [craftsLimit, rawLimit].filter(v => v > 0);
+    const maxRawQty = limits.length ? Math.min(...limits) : 0;
+    for (const id in bazaarData){
+      if (!id.startsWith('ENCHANTED_')) continue;
+      const baseId = id.slice('ENCHANTED_'.length);
+      if (category){
+        const enchCat = itemMeta[id] && itemMeta[id].category;
+        const baseCat = itemMeta[baseId] && itemMeta[baseId].category;
+        if (enchCat !== category && baseCat !== category) continue;
+      }
+      const rawProduct = bazaarData[baseId];
+      if (!rawProduct) continue; // only tier-1 pairs we can verify
+      const enchProduct = bazaarData[id];
+      const rawQs = rawProduct.quick_status;
+      const enchQs = enchProduct.quick_status;
+      if (!rawQs || !enchQs) continue;
+      const rawSellSummary = rawProduct.sell_summary || [];
+      const enchBuySummary = enchProduct.buy_summary || [];
+      if (rawSellSummary.length === 0 || enchBuySummary.length === 0) continue;
+      if (safeOnly && (!isHealthyMarket(rawProduct, rawQs) || !isHealthyMarket(enchProduct, enchQs))) continue;
+
+      // buy raw materials, capped by budget and (if set) max crafts * 160
+      const rawFill = walkBook(rawSellSummary, maxRawQty, budget);
+      const craftsAffordable = Math.floor(rawFill.filled / 160);
+      if (craftsAffordable <= 0) continue;
+      const rawUnitsUsed = craftsAffordable * 160;
+      const costFor160 = rawFill.filled > 0 ? (rawFill.totalCost / rawFill.filled) * 160 : 0; // avg cost per 160
+
+      // sell the resulting enchanted items
+      const enchFill = walkBook(enchBuySummary, craftsAffordable, Infinity);
+      const crafts = enchFill.filled;
+      if (crafts <= 0) continue;
+
+      let totalRevenue = enchFill.totalCost;
+      if (applyTax) totalRevenue = totalRevenue * (1 - flipperTaxRate);
+      const totalCost = crafts * costFor160;
+      const totalProfit = totalRevenue - totalCost;
+      const profit = totalProfit / crafts;
+      const marginPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+      const weekVol = Math.min(enchQs.sellMovingWeek||0, enchQs.buyMovingWeek||0);
+      const effectiveMaxCrafts = maxRawQty > 0 ? Math.floor(maxRawQty / 160) : 0;
+      const partial = crafts < craftsAffordable || (effectiveMaxCrafts > 0 && crafts < effectiveMaxCrafts);
+
+      if (safeOnly){
+        if (marginPct > MAX_SANE_MARGIN_PCT) continue;
+        if (hasPriceCliff(rawSellSummary, rawUnitsUsed, rawFill.totalCost/rawFill.filled)) continue;
+        if (hasPriceCliff(enchBuySummary, crafts, enchFill.avgPrice)) continue;
+      }
+
+      const enchDisplay = getItemDisplay(id);
+      const rawDisplay = getItemDisplay(baseId);
+      const stability = trackStability(craftStability, id, costFor160, enchFill.avgPrice, marginPct);
+
+      rows.push({
+        id, baseId,
+        name: enchDisplay.name, icon: enchDisplay.icon,
+        rawName: rawDisplay.name,
+        costFor160, sellRevenue: enchFill.avgPrice, profit, marginPct, weekVol,
+        crafts, totalProfit, totalCost, partial,
+        streak: stability.streak, stable: stability.stable, marginHistory: stability.history
+      });
+    }
+    return rows;
+  }
+
+  function renderCraftTab(){
+    const search = $('#craftSearch').value.trim().toLowerCase();
+    const minVol = parseFloat($('#craftMinVol').value) || 0;
+    const budget = parseFloat($('#craftBudget').value) || 0;
+    const maxCrafts = parseFloat($('#craftMaxQty').value) || 0;
+    const maxRaw = parseFloat($('#craftMaxRaw').value) || 0;
+    const category = $('#craftCategory').value;
+
+    let rows = computeCraftRows(maxCrafts, budget, category, maxRaw);
+    rows = rows.filter(r => r.weekVol >= minVol);
+    if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search) || r.rawName.toLowerCase().includes(search));
+
+    sortRows(rows, craftSort);
+    $('#craftCount').textContent = rows.length + ' craft-flip kansen gevonden (160x compact-regel)';
+    renderCraftRecommendation(rows, budget, maxCrafts, maxRaw);
+
+    if (rows.length === 0){
+      $('#craftTableWrap').innerHTML = `<div class="empty-state">Geen resultaten. Verlaag het minimum volume, zet de manipulatie-filter uit, of pas je zoekterm/max crafts/categorie aan.</div>`;
+      return;
+    }
+
+    const cols = [
+      {key:'name', label:'Enchanted item', left:true, sub:'rawName', icon:true},
+      {key:'costFor160', label:'Kosten (160x grondstof)', fmt:fmtCoins},
+      {key:'sellRevenue', label:'Verkoop (1x enchanted)', fmt:fmtCoins},
+      {key:'profit', label:'Winst per craft', fmt:fmtCoins, cls:profitClass},
+      {key:'marginPct', label:'Margin %', fmt:marginBadge, raw:true},
+      {key:'weekVol', label:'Vol/week (enchanted)', fmt:volTag, raw:true},
+      {key:'crafts', label:'Realistisch #crafts', fmt:fmtInt},
+      {key:'totalProfit', label:'Tot. winst', fmt:fmtCoins, cls:profitClass},
+      {key:'streak', label:'Stabiliteit', fmt:stabBadge, raw:true},
+      {key:'marginHistory', label:'Verloop', fmt:renderSparkline, raw:true, sortable:false},
+    ];
+    renderTable('#craftTableWrap', rows, cols, craftSort, (col)=>{
+      toggleSort(craftSort, col); renderCraftTab();
+    }, (row) => {
+      addToTradeLog({
+        type: 'craft',
+        boughtItem: row.rawName, boughtQty: row.crafts * 160, cost: row.totalCost,
+        soldItem: row.name, soldQty: row.crafts, revenue: null,
+        targetPricePerUnit: row.sellRevenue, targetProfit: row.totalProfit
+      });
+    });
+  }
+
+  function renderCraftRecommendation(rows, budget, maxCrafts, maxRaw){
+    const candidates = rows.filter(r => r.crafts > 0 && r.totalProfit > 0);
+    candidates.sort((a,b) => b.totalProfit - a.totalProfit);
+    const el = $('#craftRecommend');
+    if (candidates.length === 0){
+      el.innerHTML = `<div class="recommend empty"><div class="rec-body">
+        <div class="rec-title">Geen duidelijke aanbeveling</div>
+        <div class="rec-text">Met €${fmtCoins(budget)} coins en de huidige filters is er geen craft-flip die genoeg marktdiepte heeft. Verhoog je budget/max crafts, verlaag het volumefilter, of zet de manipulatie-filter uit.</div>
+      </div></div>`;
+      return;
+    }
+    const stableCandidates = candidates.filter(r => r.stable);
+    const top = stableCandidates.length > 0 ? stableCandidates[0] : candidates[0];
+    const isUnsure = !top.stable;
+    const partialNote = top.partial ? ` <span style="color:var(--text-faint)">(orderboek/limiet begrensd dit aantal)</span>` : '';
+    const rawAvgPrice = top.costFor160 / 160;
+    const unsureNote = isUnsure
+      ? `<br><span style="color:var(--accent)">⏳ Nog niet bevestigd — dit item is nog geen ${STABILITY_MIN_STREAK} refreshes op rij stabiel gebleken. Wacht liever nog even, of check zelf extra goed in-game voordat je dit uitvoert.</span>`
+      : '';
+    el.innerHTML = `<div class="recommend${isUnsure?' unsure':''}"><div class="rec-body">
+      <div class="rec-title">${isUnsure?'Beste (nog onbevestigde) craft-flip':'Beste craft-flip met jouw budget'}${maxCrafts>0? ' (max '+fmtInt(maxCrafts)+' crafts)':''}${maxRaw>0? ' (max '+fmtInt(maxRaw)+' grondstof)':''}</div>
+      <div class="rec-text">Koop <b>${fmtInt(top.crafts * 160)}x ${escapeHTML(top.rawName)}</b> voor gemiddeld <b>${fmtCoins(rawAvgPrice)}</b> coins/stuk (totaal ≈ <b>${fmtCoins(top.totalCost)}</b> coins), craft dit om tot <b>${fmtInt(top.crafts)}x ${top.icon} ${escapeHTML(top.name)}</b>, en verkoop die weer voor gemiddeld <b>${fmtCoins(top.sellRevenue)}</b> coins/stuk.${partialNote}
+      Verwachte winst: <b>${fmtCoins(top.totalProfit)}</b> coins (margin ${fmtPct(top.marginPct)}, vol/week ${fmtInt(top.weekVol)}).${unsureNote}</div>
+      <button id="craftRecToLogBtn" style="margin-top:10px;">Zet in Mijn Trades</button>
+    </div></div>`;
+    $('#craftRecToLogBtn').addEventListener('click', () => {
+      // logged as "open" (bought, not yet sold) — fill in the real sale price in the
+      // Mijn Trades tab once you've actually crafted + sold it in-game
+      addToTradeLog({
+        type: 'craft',
+        boughtItem: top.rawName, boughtQty: top.crafts * 160, cost: top.totalCost,
+        soldItem: top.name, soldQty: top.crafts, revenue: null,
+        targetPricePerUnit: top.sellRevenue, targetProfit: top.totalProfit
+      });
+    });
+  }
+
+  // ---------- auction house watchlist scan ----------
+  function fmtDuration(ms){
+    if (ms === null || ms === undefined) return '—';
+    if (ms <= 0) return 'verlopen';
+    const days = Math.floor(ms / 86400000);
+    const hours = Math.floor((ms % 86400000) / 3600000);
+    const minutes = Math.floor((ms % 3600000) / 60000);
+    if (days > 0) return `${days}d ${hours}u`;
+    if (hours > 0) return `${hours}u ${minutes}m`;
+    return `${minutes}m`;
+  }
+  function timeTag(ms){
+    const cls = (ms !== null && ms < 30*60000) ? 'soon' : ''; // <30min left = worth flagging
+    return `<span class="time-tag ${cls}">${fmtDuration(ms)}</span>`;
+  }
+
+  const AUC_ALERT_SOON_MS = 30 * 60000; // <30 min left — still shown as an info highlight, but no longer triggers the alert itself
+  const MAX_AUCTION_REMAINING_MS = 2 * 24 * 60 * 60000; // 2 dagen — een "laagste veiling" die pas over 16 dagen afloopt is niet bruikbaar
+  let auctionAutoTimer = null;
+  let previouslyAlerting = new Set(); // which watch terms were alerting last render — only beep on new alerts
+
+  // accepts "1500000", "1.5m" (million), "500k" (thousand), "2b" (billion) — makes typing
+  // large coin amounts painless. Returns null if the input is empty/unparseable.
+  function parseShorthandNumber(raw){
+    if (raw === null || raw === undefined) return null;
+    const s = String(raw).trim().toLowerCase().replace(/,/g, '.');
+    if (s === '') return null;
+    const m = s.match(/^(-?\d+(?:\.\d+)?)\s*([kmb])?$/);
+    if (!m) { const n = parseFloat(s); return isNaN(n) ? null : n; }
+    const num = parseFloat(m[1]);
+    const mult = { k: 1e3, m: 1e6, b: 1e9 }[m[2]] || 1;
+    return num * mult;
+  }
+
+  function renderWatchlist(){
+    saveWatchlist();
+    const el = $('#aucWatchlist');
+    if (auctionWatchlist.length === 0){
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = auctionWatchlist.map(w =>
+      `<div class="chip">${w.iconUrl ? `<img class="item-icon" src="${escapeHTML(w.iconUrl)}" onerror="this.remove()">` : ''}${escapeHTML(w.displayName)}${w.alertPrice ? `<span style="color:var(--accent);font-size:11px;">&lt; ${fmtCoins(w.alertPrice)}</span>` : ''}<button class="chip-del" data-term="${escapeHTML(w.term)}" title="Verwijder">✕</button></div>`
+    ).join('');
+    el.querySelectorAll('.chip-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        auctionWatchlist = auctionWatchlist.filter(w => w.term !== btn.dataset.term);
+        delete auctionResults[btn.dataset.term];
+        renderWatchlist();
+        renderAuctionResults();
+      });
+    });
+  }
+
+  // ---------- settings: flipper tax + NPC prices ----------
+  function updateTaxPctLabels(){
+    const pctStr = (flipperTaxRate * 100).toFixed(2).replace(/\.?0+$/, '') || '0';
+    $$('.tax-pct-bazaar').forEach(el => el.textContent = pctStr);
+    $$('.tax-pct-craft').forEach(el => el.textContent = pctStr);
+  }
+  $('#settingsFlipperTax').value = (flipperTaxRate * 100).toFixed(2).replace(/\.?0+$/, '');
+  updateTaxPctLabels();
+  $('#settingsFlipperTax').addEventListener('change', () => {
+    const val = parseFloat($('#settingsFlipperTax').value);
+    if (isNaN(val) || val < 0 || val >= 100){
+      alert('Vul een geldig percentage in (0 t/m 99.99).');
+      $('#settingsFlipperTax').value = (flipperTaxRate * 100).toFixed(2).replace(/\.?0+$/, '');
+      return;
+    }
+    flipperTaxRate = val / 100;
+    saveFlipperTax();
+    updateTaxPctLabels();
+    renderBazaarTab();
+    renderCraftTab();
+  });
+
+  function renderNpcList(){
+    saveNpcPrices();
+    const el = $('#npcList');
+    const ids = Object.keys(npcPrices);
+    if (ids.length === 0){
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = ids.map(id => {
+      const display = itemMeta[id] ? itemMeta[id].name : id;
+      return `<div class="chip">${escapeHTML(display)} — ${fmtCoins(npcPrices[id])}<button class="chip-del" data-npc-id="${escapeHTML(id)}" title="Verwijder">✕</button></div>`;
+    }).join('');
+    el.querySelectorAll('.chip-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        delete npcPrices[btn.dataset.npcId];
+        renderNpcList();
+        renderBazaarTab();
+        renderNpcScannerTab();
+      });
+    });
+  }
+  $('#npcAddBtn').addEventListener('click', () => {
+    const rawId = $('#npcItemInput').value.trim().toUpperCase().replace(/[\s'-]+/g, '_');
+    const price = parseFloat($('#npcPriceInput').value);
+    if (!rawId){ alert('Vul een item-ID in, bv. ENCHANTED_SNOW_BLOCK.'); return; }
+    if (isNaN(price) || price <= 0){ alert('Vul een geldige NPC-verkoopprijs per stuk in.'); return; }
+    npcPrices[rawId] = price;
+    $('#npcItemInput').value = ''; $('#npcPriceInput').value = '';
+    renderNpcList();
+    renderBazaarTab();
+    renderNpcScannerTab();
+  });
+  $('#npcItemInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#npcAddBtn').click(); });
+  $('#npcPriceInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#npcAddBtn').click(); });
+  renderNpcList();
+
+  $('#aucAddBtn').addEventListener('click', () => {
+    const val = $('#aucItemInput').value.trim();
+    if (!val) return;
+    const alertRaw = $('#aucAlertInput').value.trim();
+    const alertPrice = alertRaw === '' ? null : parseShorthandNumber(alertRaw);
+    const resolved = resolveAuctionTerm(val);
+    const key = val.toLowerCase();
+    if (!auctionWatchlist.some(w => w.term === key)){
+      auctionWatchlist.push({ term: key, searchTerm: resolved.searchTerm, displayName: resolved.displayName, iconUrl: resolved.iconUrl, alertPrice });
+    } else {
+      auctionWatchlist = auctionWatchlist.map(w => w.term === key ? {...w, searchTerm: resolved.searchTerm, displayName: resolved.displayName, iconUrl: resolved.iconUrl, alertPrice} : w);
+    }
+    $('#aucItemInput').value = ''; $('#aucAlertInput').value = '';
+    renderWatchlist();
+  });
+  $('#aucItemInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#aucAddBtn').click(); });
+  $('#aucAlertInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#aucAddBtn').click(); });
+
+  // deze drie tabbladen (Auction House, AH Flip-scanner, NPC-verkoop) delen allemaal
+  // dezelfde volledige scan — elk heeft zijn eigen scanknop/statuslijn/voortgangsbalk
+  // (aparte elementen), maar ze worden via een gedeelde class allemaal tegelijk bijgewerkt
+  function setAucScanUiState(scanning, statusText){
+    $$('.auc-scan-btn').forEach(btn => btn.disabled = scanning);
+    $$('.auc-progress-wrap').forEach(el => el.style.display = scanning ? 'block' : 'none');
+    if (statusText !== undefined) $$('.auc-status-text').forEach(el => el.textContent = statusText);
+  }
+
+  async function scanAuctions(){
+    if (auctionScanning) return;
+    auctionScanning = true;
+    setAucScanUiState(true, 'Bezig met scannen...');
+    const freshResults = {};
+    auctionWatchlist.forEach(w => { freshResults[w.term] = { bestBin: null, bestAuction: null, soonestAuction: null, matchCount: 0 }; });
+    // globale tracker (los van de watchlist) voor de AH flip-scanner: per bazaar-item de
+    // twee laagste actieve BIN's — genoeg om zowel AH-interne outliers als bazaar-arbitrage
+    // te herkennen, zonder alle duizenden losse veilingen te hoeven onthouden
+    const globalBins = {};
+    const now = lastUpdated ? lastUpdated.getTime() : Date.now();
+
+    try{
+      const watchList = auctionWatchlist.map(w => ({ term: w.term, searchTerm: w.searchTerm }));
+      const first = await fetchJsonSmart(AUCTIONS_URL + '?page=0');
+      const totalPages = Math.min(first.totalPages || 1, MAX_AUCTION_PAGES);
+      processAuctionPage(first, freshResults, watchList, now, globalBins);
+      let done = 1;
+      updateScanProgress(done, totalPages);
+
+      const remainingPages = [];
+      for (let p = 1; p < totalPages; p++) remainingPages.push(p);
+
+      // fetch remaining pages with limited concurrency so we don't hammer the free proxies
+      let cursor = 0;
+      async function worker(){
+        while (cursor < remainingPages.length){
+          const p = remainingPages[cursor++];
+          try{
+            const pageJson = await fetchJsonSmart(AUCTIONS_URL + '?page=' + p);
+            processAuctionPage(pageJson, freshResults, watchList, now, globalBins);
+          }catch(e){ /* skip a failed page rather than aborting the whole scan */ }
+          done++;
+          updateScanProgress(done, totalPages);
+        }
+      }
+      const workers = Array.from({length: Math.min(AUCTION_SCAN_CONCURRENCY, remainingPages.length)}, worker);
+      await Promise.all(workers);
+
+      // remember the previous best prices (for the ticker's up/down delta) before overwriting
+      auctionPrevResults = auctionResults;
+      auctionResults = freshResults;
+      lastGlobalBins = globalBins;
+      ahFlips = computeAhFlips(globalBins);
+      setAucScanUiState(false, 'Laatste scan: ' + new Date().toLocaleTimeString('nl-NL') + ' — ' + totalPages + ' pagina\'s doorzocht.');
+    }catch(err){
+      setAucScanUiState(false, 'Scan mislukt: ' + (err.message || err));
+    }finally{
+      auctionScanning = false;
+      setAucScanUiState(false);
+      renderAuctionResults();
+      renderAhFlipper();
+      renderNpcScannerTab();
+    }
+  }
+
+  function updateScanProgress(done, total){
+    const pct = Math.round((done/total)*100);
+    $$('.auc-progress-fill').forEach(el => el.style.width = pct + '%');
+    $$('.auc-progress-text').forEach(el => el.textContent = `Pagina ${done}/${total} doorzocht (${pct}%)`);
+  }
+
+  function processAuctionPage(pageJson, results, watchList, now, globalBins){
+    const auctions = (pageJson && pageJson.auctions) || [];
+    for (const a of auctions){
+      if (!a.item_name) continue;
+      if (a.end && a.end < now) continue; // defensively skip anything already ended
+      const nameLower = a.item_name.toLowerCase();
+
+      // AH flip-scanner: track the two cheapest BIN's per item, hele AH, maar ALLEEN voor
+      // items die exact overeenkomen met een bazaar-item — dat garandeert een identiek,
+      // stapelbaar item zonder enchants/reforges/sterren, dus een eerlijke vergelijking.
+      if (globalBins && a.bin && a.starting_bid > 0){
+        const exactId = itemNameToId[nameLower];
+        if (exactId && bazaarData && bazaarData[exactId]){
+          const price = a.starting_bid;
+          const remaining = (a.end||0) - now;
+          let g = globalBins[exactId];
+          if (!g) g = globalBins[exactId] = { min1: null, min2: null };
+          if (!g.min1 || price < g.min1.price){
+            g.min2 = g.min1;
+            g.min1 = { price, remaining };
+          } else if (!g.min2 || price < g.min2.price){
+            g.min2 = { price, remaining };
+          }
+        }
+      }
+
+      for (const w of watchList){
+        if (!nameLower.includes(w.searchTerm.toLowerCase())) continue;
+        const bucket = results[w.term];
+        bucket.matchCount++;
+        const remaining = (a.end||0) - now;
+        if (a.bin){
+          const price = a.starting_bid;
+          if (!bucket.bestBin || price < bucket.bestBin.price){
+            bucket.bestBin = { price, remaining, itemName: a.item_name };
+          }
+        } else {
+          const price = (a.highest_bid_amount && a.highest_bid_amount > 0) ? a.highest_bid_amount : a.starting_bid;
+          // een veiling die pas over dagen afloopt is niet bruikbaar als "laagste veiling om
+          // nu op te bieden" — die telt dus niet mee als kandidaat, ook al is de prijs laag
+          if (remaining > 0 && remaining <= MAX_AUCTION_REMAINING_MS && (!bucket.bestAuction || price < bucket.bestAuction.price)){
+            bucket.bestAuction = { price, remaining, itemName: a.item_name };
+          }
+          // track the soonest-ending active auction separately — the cheapest auction isn't
+          // always the one about to expire, and the user wants to know about EITHER
+          if (remaining > 0 && (!bucket.soonestAuction || remaining < bucket.soonestAuction.remaining)){
+            bucket.soonestAuction = { price, remaining, itemName: a.item_name };
+          }
+        }
+      }
+    }
+  }
+
+  // simple two-tone beep via Web Audio API — no external asset needed, works offline
+  function playAlertBeep(){
+    if (!$('#aucSoundAlert').checked) return;
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1175].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime + i*0.18);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.18 + 0.16);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i*0.18);
+        osc.stop(ctx.currentTime + i*0.18 + 0.17);
+      });
+    }catch(e){ /* audio not available — silently skip */ }
+  }
+
+  // renders the top exchange-style ticker strip: one compact badge per watched item,
+  // showing its current best BIN and an up/down delta vs. the previous scan.
+  function renderTicker(){
+    const strip = $('#aucTicker');
+    if (Object.keys(auctionResults).length === 0 || auctionWatchlist.length === 0){
+      strip.style.display = 'none';
+      strip.innerHTML = '';
+      return;
+    }
+    strip.style.display = 'flex';
+    strip.innerHTML = auctionWatchlist.map(w => {
+      const r = auctionResults[w.term];
+      const prev = auctionPrevResults[w.term];
+      const cur = r && r.bestBin ? r.bestBin.price : null;
+      const prevPrice = prev && prev.bestBin ? prev.bestBin.price : null;
+      let deltaHtml = '';
+      if (cur !== null && prevPrice !== null && cur !== prevPrice){
+        const up = cur > prevPrice;
+        deltaHtml = `<span class="t-delta ${up?'up':'down'}">${up?'▲':'▼'} ${fmtCoins(Math.abs(cur - prevPrice))}</span>`;
+      }
+      const binAlert = !!(r && r.bestBin && w.alertPrice && r.bestBin.price < w.alertPrice);
+      const isAlert = binAlert; // alleen een BIN onder je alertprijs telt als alert — een veiling die bijna afloopt niet meer
+      return `<div class="ticker-item${isAlert?' alert':''}">
+        ${w.iconUrl ? `<img class="item-icon" src="${escapeHTML(w.iconUrl)}" onerror="this.remove()">` : ''}
+        <span class="t-sym">${escapeHTML(w.displayName.toUpperCase())}</span>
+        <span class="t-price">${cur !== null ? fmtCoins(cur) : '—'}</span>
+        ${deltaHtml}
+        ${isAlert ? '<span></span>' : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderAuctionResults(){
+    const el = $('#aucTableWrap');
+    const banner = $('#aucAlertBanner');
+    if (auctionWatchlist.length === 0){
+      el.innerHTML = `<div class="empty-state">Nog geen items op je watchlist. Voeg er hierboven een toe (naam of item-ID).</div>`;
+      banner.innerHTML = '';
+      renderTicker();
+      return;
+    }
+    if (Object.keys(auctionResults).length === 0){
+      el.innerHTML = `<div class="empty-state">Klik op "Zoeken in Auction House" om resultaten te zien.</div>`;
+      banner.innerHTML = '';
+      renderTicker();
+      return;
+    }
+
+    const currentlyAlerting = new Set();
+    const currentlyArbitraging = new Set();
+    const rows = auctionWatchlist.map(w => {
+      const r = auctionResults[w.term] || { bestBin: null, bestAuction: null, soonestAuction: null, matchCount: 0 };
+      const binAlert = !!(r.bestBin && w.alertPrice && r.bestBin.price < w.alertPrice);
+      // een bijna-aflopende veiling wordt nog wel getoond (zie soonAuction hieronder),
+      // maar telt niet meer als "alert" — alleen een BIN onder je alertprijs doet dat
+      const soonAuction = r.soonestAuction;
+      const isAlert = binAlert;
+      if (isAlert) currentlyAlerting.add(w.term);
+
+      const arb = computeArbitrage(w, r);
+      if (arb) currentlyArbitraging.add(w.term);
+
+      const binHtml = (r.bestBin
+        ? `<span class="v${binAlert?' hot':''}">${fmtCoins(r.bestBin.price)}</span><span class="t${r.bestBin.remaining<AUC_ALERT_SOON_MS?' soon':''}">${fmtDuration(r.bestBin.remaining)}</span>`
+        : `<span class="v empty">geen BIN</span>`)
+        + (arb ? `<span class="t-extra arb" title="Aanname: veiling = 1 stuk — check zelf de stack-grootte in-game. Een BIN kan bovendien al gekocht zijn tegen de tijd dat je het item opent.">Arbitrage: bazaar ≈ ${fmtCoins(arb.netBazaarSell)}/stuk netto → +${fmtCoins(arb.profit)} (${arb.profitPct.toFixed(1)}%) bij direct doorverkopen</span>` : '');
+      // "laagste veiling" cell: the cheapest active auction, and — right in this same
+      // cell rather than a separate column — a small extra line when a different
+      // (pricier) auction on this item is the one actually about to end.
+      const cheapestIsSoonest = !soonAuction || !r.bestAuction || soonAuction.remaining === r.bestAuction.remaining;
+      const aucHtml = r.bestAuction
+        ? `<span class="v${r.bestAuction.remaining<AUC_ALERT_SOON_MS?' hot':''}">${fmtCoins(r.bestAuction.price)}</span><span class="t${r.bestAuction.remaining<AUC_ALERT_SOON_MS?' soon':''}">${fmtDuration(r.bestAuction.remaining)}</span>`
+          + (!cheapestIsSoonest && soonAuction ? `<span class="t-extra">⏰ ${fmtCoins(soonAuction.price)} loopt af over ${fmtDuration(soonAuction.remaining)}</span>` : '')
+        : (soonAuction ? `<span class="v empty">geen veiling</span><span class="t-extra">⏰ ${fmtCoins(soonAuction.price)} loopt af over ${fmtDuration(soonAuction.remaining)}</span>` : `<span class="v empty">geen veiling</span>`);
+
+      return `<tr class="${isAlert?'alert':''}${arb?' arb-row':''}">
+        <td class="left">
+          <div class="inst-symbol">
+            ${w.iconUrl ? `<img class="item-icon" src="${escapeHTML(w.iconUrl)}" onerror="this.remove()">` : ''}
+            <div class="names">
+              <span class="n-main">${escapeHTML(w.displayName)}${isAlert?'<span class="n-alert-flag"></span>':''}</span>
+              ${w.alertPrice ? `<span class="inst-badge">alert &lt; ${fmtCoins(w.alertPrice)}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td class="inst-metric">${binHtml}</td>
+        <td class="inst-metric">${aucHtml}</td>
+        <td class="inst-matches">${fmtInt(r.matchCount)}</td>
+      </tr>`;
+    });
+
+    const newAlerts = [...currentlyAlerting].filter(t => !previouslyAlerting.has(t));
+    if (newAlerts.length > 0) playAlertBeep();
+    previouslyAlerting = currentlyAlerting;
+
+    const alertHtml = currentlyAlerting.size > 0
+      ? `<div class="alert-banner">${currentlyAlerting.size} alert${currentlyAlerting.size>1?'s':''} actief: ${escapeHTML([...currentlyAlerting].map(t => (auctionWatchlist.find(w=>w.term===t)||{}).displayName || t).join(', '))}</div>`
+      : '';
+    const arbHtml = currentlyArbitraging.size > 0
+      ? `<div class="alert-banner arb-banner">${currentlyArbitraging.size} arbitrage-kans${currentlyArbitraging.size>1?'en':''} (AH goedkoper dan bazaar): ${escapeHTML([...currentlyArbitraging].map(t => (auctionWatchlist.find(w=>w.term===t)||{}).displayName || t).join(', '))}</div>`
+      : '';
+    banner.innerHTML = alertHtml + arbHtml;
+
+    el.innerHTML = `<div class="table-wrap"><table class="instrument-table"><thead><tr>
+        <th class="left">Instrument</th><th>Laagste BIN</th><th>Laagste veiling</th><th>Matches</th>
+      </tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+    renderTicker();
+  }
+
+  $$('.auc-scan-btn').forEach(btn => btn.addEventListener('click', scanAuctions));
+
+  $('#aucAutoScan').addEventListener('change', () => {
+    if (auctionAutoTimer) { clearInterval(auctionAutoTimer); auctionAutoTimer = null; }
+    if ($('#aucAutoScan').checked){
+      if (auctionWatchlist.length === 0){
+        alert('Voeg eerst minstens één item toe aan je watchlist.');
+        $('#aucAutoScan').checked = false;
+        return;
+      }
+      scanAuctions();
+      auctionAutoTimer = setInterval(scanAuctions, 10000);
+    }
+  });
+
+  // ---------- monitor mode: fullscreen dashboard for a second monitor ----------
+  function enterMonitorMode(){
+    document.body.classList.add('monitor-mode');
+    $$('.tab-btn').forEach(b=>b.classList.remove('active'));
+    $$('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="auctions"]').classList.add('active');
+    document.getElementById('panel-auctions').classList.add('active');
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  }
+  function exitMonitorMode(){
+    document.body.classList.remove('monitor-mode');
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  }
+  $('#aucMonitorBtn').addEventListener('click', enterMonitorMode);
+  $('#aucExitMonitorBtn').addEventListener('click', exitMonitorMode);
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) document.body.classList.remove('monitor-mode');
+  });
+
+  renderWatchlist();
+  renderAuctionResults();
+  renderAhFlipper();
+  renderNpcScannerTab();
+  renderEnchantOptimizer();
+
+  // ---------- shared table rendering ----------
+  function profitClass(v){ return v >= 0 ? 'profit-pos' : 'profit-neg'; }
+  function marginBadge(v){
+    const cls = v >= 15 ? 'hi' : 'lo';
+    return `<span class="margin-badge ${cls}">${fmtPct(v)}</span>`;
+  }
+  function volTag(v){
+    const cls = v < 5000 ? 'low' : '';
+    return `<span class="vol-tag ${cls}">${fmtInt(v)}</span>`;
+  }
+  function stabBadge(streak){
+    const stable = streak >= STABILITY_MIN_STREAK;
+    return stable
+      ? `<span class="stab-badge stable">Stabiel (${streak}x)</span>`
+      : `<span class="stab-badge new">⏳ Nieuw (${streak}x)</span>`;
+  }
+
+  function toggleSort(sortState, col){
+    if (sortState.col === col){
+      sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortState.col = col; sortState.dir = 'desc';
+    }
+  }
+
+  function sortRows(rows, sortState){
+    rows.sort((a,b) => {
+      let av = a[sortState.col], bv = b[sortState.col];
+      if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      if (av < bv) return sortState.dir==='asc' ? -1 : 1;
+      if (av > bv) return sortState.dir==='asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // onRowAction (optioneel): callback(row) — als meegegeven, krijgt elke rij een extra
+  // "Zet in Mijn Trades"-knop, zodat je niet alleen de bovenste aanbeveling maar élke
+  // rij rechtstreeks kan loggen.
+  function renderTable(containerSel, rows, cols, sortState, onSort, onRowAction){
+    const displayRows = rows.slice(0, 300);
+    let html = '<div class="table-wrap"><table><thead><tr>';
+    if (onRowAction) html += '<th></th>';
+    cols.forEach(c => {
+      if (c.sortable === false){
+        html += `<th class="${c.left?'left':''}">${c.label}</th>`;
+        return;
+      }
+      const arrow = sortState.col === c.key ? (sortState.dir==='asc' ? '▲' : '▼') : '';
+      html += `<th class="${c.left?'left':''}" data-col="${c.key}">${c.label}<span class="arrow">${arrow}</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+    displayRows.forEach((r, i) => {
+      html += `<tr class="${r.npcFlip ? 'npc-flip-row' : ''}" data-idx="${i}">`;
+      if (onRowAction) html += `<td class="row-action-cell"><button class="row-add-trade-btn" title="Zet deze flip in Mijn Trades"></button></td>`;
+      cols.forEach(c => {
+        const val = r[c.key];
+        let cellHtml;
+        if (c.raw){
+          cellHtml = c.fmt(val);
+        } else {
+          cellHtml = c.fmt ? c.fmt(val) : val;
+        }
+        const clsExtra = c.cls ? c.cls(val) : '';
+        if (c.left){
+          const sub = c.sub ? `<span class="item-id">van ${escapeHTML(r[c.sub])}</span>` : `<span class="item-id">${escapeHTML(r.id)}</span>`;
+          const iconHtml = c.icon && r.icon ? `<span class="cat-icon">${r.icon}</span>` : '';
+          const npcBadge = r.npcFlip ? `<span class="npc-tag" title="Koop op de bazaar, verkoop direct aan een NPC in-game voor een vaste prijs — 100% risicovrij, geen flipper tax, geen wachten op een sell-order.">NPC-verkoop</span>` : '';
+          html += `<td class="left">${iconHtml}<span class="item-name">${escapeHTML(val)}</span>${sub}${npcBadge}</td>`;
+        } else {
+          html += `<td class="${clsExtra}">${cellHtml}</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    const el = document.querySelector(containerSel);
+    el.innerHTML = html;
+    el.querySelectorAll('th[data-col]').forEach(th => {
+      th.addEventListener('click', () => onSort(th.dataset.col));
+    });
+    if (onRowAction){
+      el.querySelectorAll('.row-add-trade-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.closest('tr').dataset.idx);
+          const row = displayRows[idx];
+          if (row) onRowAction(row);
+        });
+      });
+    }
+  }
+
+  // ---------- tabs ----------
+  $$('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.tab-btn').forEach(b=>b.classList.remove('active'));
+      $$('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- controls ----------
+  ['bazaarSearch','bazaarBudget','bazaarMaxQty','bazaarMinVol','bazaarTax','bazaarSafe','bazaarCategory'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderBazaarTab);
+    document.getElementById(id).addEventListener('change', renderBazaarTab);
+  });
+  ['craftSearch','craftBudget','craftMaxQty','craftMaxRaw','craftMinVol','craftTax','craftSafe','craftCategory'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderCraftTab);
+    document.getElementById(id).addEventListener('change', renderCraftTab);
+  });
+  $('#refreshBtn').addEventListener('click', () => { fetchBazaar(); secondsLeft = REFRESH_SECONDS; });
+
+  // ---------- trade log ----------
+  // A trade starts the moment you buy (we know cost, item, qty — but not yet what
+  // you'll sell it for in-game, or whether you'll sell it all at once). Each trade can
+  // have MULTIPLE sell entries — e.g. sell 40 of your 100 now for X, sell the rest of
+  // 60 later for Y — so partial/staggered selling matches how flipping actually works.
+  // Profit is computed PER SELL (revenue minus that sell's share of the cost) and only
+  // counts toward the totals once a sell is actually logged. Losses are just negative
+  // profit — no special-casing, the coloring (green/red) already handles that.
+  function tradeStats(t){
+    // "sellableQty" is hoeveel je UITEINDELIJK te verkopen hebt van het verkochte item —
+    // bij een gewone bazaar-flip is dat gelijk aan boughtQty (zelfde item), maar bij een
+    // craft-flip koop je bv. 32.000x grondstof en craft je die om tot maar 200x enchanted
+    // item: dan moet zowel "nog te verkopen" als de kostprijs/stuk gebaseerd zijn op die
+    // 200, niet op de 32.000 grondstof-eenheden. Oudere, al opgeslagen trades hebben dit
+    // veld nog niet — die vallen terug op het oude (soms onjuiste) boughtQty-gedrag.
+    const sellableQty = (t.sellableQty !== undefined && t.sellableQty !== null && t.sellableQty > 0)
+      ? t.sellableQty : t.boughtQty;
+    const costPerUnit = sellableQty > 0 ? t.cost / sellableQty : t.cost;
+    const soldQty = t.sells.reduce((s,x) => s + x.qty, 0);
+    const remainingQty = Math.max(0, sellableQty - soldQty);
+    const totalProfit = t.sells.reduce((s,x) => s + (x.revenue - x.qty * costPerUnit), 0);
+    const status = t.sells.length === 0 ? 'open' : (remainingQty > 0.0001 ? 'partial' : 'closed');
+    return { costPerUnit, soldQty, remainingQty, totalProfit, status, sellableQty };
+  }
+
+  // "huidige marktprijs vs. richtprijs" — links an open trade back to what the bazaar
+  // is doing RIGHT NOW, instead of the trade log going stale the moment you add it.
+  // Works for any trade whose "verkocht als"-item matches a known bazaar item, and
+  // shows the delta vs. the recommendation's target price when one was set.
+  function renderPriceCompareHtml(t){
+    const current = getCurrentSellPrice(t.soldItem);
+    if (current === null) return '';
+    let html = `Huidige marktprijs: <b>${fmtCoins(current)}</b>/stuk`;
+    if (t.targetPricePerUnit){
+      const diffPct = ((current - t.targetPricePerUnit) / t.targetPricePerUnit) * 100;
+      const cls = diffPct >= 0 ? 'profit-pos' : 'profit-neg';
+      html += ` <span class="${cls}">(${diffPct>=0?'▲ +':'▼ '}${diffPct.toFixed(1)}% t.o.v. je richtprijs van ${fmtCoins(t.targetPricePerUnit)})</span>`;
+    }
+    return html;
+  }
+
+  // called on every ~5s bazaar refresh — updates only the small price-compare lines
+  // in place (by id), so it never disturbs focus/text in the sell-qty/revenue inputs
+  // a user might be mid-typing into elsewhere in the (unrelated) table rows.
+  function refreshTradePriceComparisons(){
+    tradeLog.forEach(t => {
+      const el = document.getElementById('price-compare-' + t.id);
+      if (!el) return;
+      const html = renderPriceCompareHtml(t);
+      if (html) el.innerHTML = html;
+    });
+  }
+
+  function renderTradeLog(){
+    saveTradeLog();
+    const allSells = tradeLog.flatMap(t => t.sells);
+    const totalProfit = tradeLog.reduce((s,t) => s + tradeStats(t).totalProfit, 0);
+    const openCount = tradeLog.filter(t => tradeStats(t).status !== 'closed').length;
+    $('#tradeCount').textContent = tradeLog.length;
+    $('#tradeOpenCount').textContent = openCount;
+    $('#tradeTotal').textContent = fmtCoins(totalProfit);
+    $('#tradeTotal').style.color = totalProfit >= 0 ? 'var(--green)' : 'var(--red)';
+    $('#tradeAvg').textContent = allSells.length ? fmtCoins(totalProfit / allSells.length) : '—';
+
+    if (tradeLog.length === 0){
+      $('#tradeTableWrap').innerHTML = `<div class="empty-state">Nog geen trades gelogd. Voeg hierboven je eerste flip toe, of klik op "Zet in Mijn Trades" bij een aanbeveling.</div>`;
+      renderProfitChart();
+      return;
+    }
+    let html = '<div class="table-wrap"><table><thead><tr>'
+      + '<th class="left">Type</th><th class="left">Gekocht</th><th>Prijs/stuk (koop)</th><th>Kostprijs</th>'
+      + '<th class="left">Verkocht als</th><th class="left">Status</th><th>Winst tot nu toe</th><th>Tijd</th><th></th>'
+      + '</tr></thead><tbody>';
+    tradeLog.slice().reverse().forEach(t => {
+      const st = tradeStats(t);
+      const typeLabel = t.type === 'craft' ? 'Craft' : 'Bazaar';
+      const statusBadge = st.status === 'open' ? '<span class="open-badge">⏳ nog niet verkocht</span>'
+        : st.status === 'partial' ? `<span class="partial-badge">◐ ${fmtInt(st.soldQty)}/${fmtInt(st.sellableQty)} verkocht</span>`
+        : '<span class="closed-badge">✓ volledig verkocht</span>';
+
+      html += `<tr>
+        <td class="left">${typeLabel}</td>
+        <td class="left"><span class="item-name">${fmtInt(t.boughtQty)}x ${escapeHTML(t.boughtItem)}</span></td>
+        <td>${fmtCoins(st.costPerUnit)}</td>
+        <td>${fmtCoins(t.cost)}</td>
+        <td class="left"><span class="item-name">${escapeHTML(t.soldItem)}</span></td>
+        <td class="left">${statusBadge}</td>
+        <td class="${profitClass(st.totalProfit)}">${t.sells.length ? fmtCoins(st.totalProfit) : '—'}</td>
+        <td style="color:var(--text-faint);font-size:11px;">${t.time}</td>
+        <td><button class="del-btn" data-id="${t.id}" title="Verwijder hele trade">✕</button></td>
+      </tr>`;
+
+      // detail row: past sells for this trade + (if anything remains) a form to log another sell
+      const sellLines = t.sells.map(s => {
+        const profit = s.revenue - s.qty * st.costPerUnit;
+        return `<div class="sell-line">
+          <span>${fmtInt(s.qty)}x verkocht voor <b>${fmtCoins(s.revenue)}</b> (${fmtCoins(s.revenue / s.qty)}/stuk)</span>
+          <span class="sell-profit ${profitClass(profit)}">${profit >= 0 ? '+' : ''}${fmtCoins(profit)}</span>
+          <span style="color:var(--text-faint);font-size:11px;">${s.time}</span>
+          <button class="sell-del" data-trade="${t.id}" data-sell="${s.id}" title="Verwijder deze verkoop">✕</button>
+        </div>`;
+      }).join('');
+      const suggestedTotal = t.targetPricePerUnit ? st.remainingQty * t.targetPricePerUnit : null;
+      const targetHintHtml = (st.remainingQty > 0.0001 && t.targetPricePerUnit) ? `
+        <div class="target-hint" title="Verwachting op het moment dat je toevoegde (${fmtCoins(suggestedTotal)} totaal) — check de actuele prijs in-game.">Verwachte verkoopprijs: <b>${fmtCoins(t.targetPricePerUnit)}</b>/stuk
+          <button class="fill-target-btn" data-id="${t.id}" data-qty="${st.remainingQty}" data-total="${suggestedTotal}" title="Vult aantal + totaalbedrag hieronder automatisch in">Vul in</button>
+        </div>` : '';
+      // live "huidige marktprijs vs. richtprijs" line — refreshed independently every
+      // bazaar tick (see refreshTradePriceComparisons) so it stays current WITHOUT
+      // re-rendering the whole row and losing whatever you're mid-typing below.
+      const priceCompareHtml = st.remainingQty > 0.0001
+        ? `<div class="price-compare" id="price-compare-${t.id}">${renderPriceCompareHtml(t)}</div>` : '';
+      const addSellFormHtml = st.remainingQty > 0.0001 ? `
+        <div class="sale-input-row">
+          <input type="number" placeholder="aantal (max ${fmtInt(st.remainingQty)})" data-id="${t.id}" class="sell-qty-input" style="width:150px;">
+          <input type="number" placeholder="totaalbedrag voor dít aantal (niet per stuk!)" data-id="${t.id}" class="sell-revenue-input" style="width:230px;">
+          <button class="confirm-sale-btn primary" data-id="${t.id}">✓ Verkoop loggen</button>
+        </div>` : '';
+      html += `<tr class="trade-detail-row"><td colspan="9">
+        ${sellLines ? `<div class="sells-list">${sellLines}</div>` : ''}
+        ${st.remainingQty > 0.0001 ? `<div class="remaining-note">Nog ${fmtInt(st.remainingQty)}x niet verkocht${t.sells.length ? ' — vul hieronder de volgende (deel)verkoop in' : ''}: ${targetHintHtml}</div>` : ''}
+        ${priceCompareHtml}
+        ${addSellFormHtml}
+      </td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    $('#tradeTableWrap').innerHTML = html;
+    $('#tradeTableWrap').querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tradeLog = tradeLog.filter(t => t.id !== Number(btn.dataset.id));
+        renderTradeLog();
+      });
+    });
+    $('#tradeTableWrap').querySelectorAll('.sell-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = tradeLog.find(t => t.id === Number(btn.dataset.trade));
+        if (!t) return;
+        t.sells = t.sells.filter(s => s.id !== Number(btn.dataset.sell));
+        renderTradeLog();
+      });
+    });
+    $('#tradeTableWrap').querySelectorAll('.fill-target-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const qtyInput = $('#tradeTableWrap').querySelector(`.sell-qty-input[data-id="${id}"]`);
+        const revInput = $('#tradeTableWrap').querySelector(`.sell-revenue-input[data-id="${id}"]`);
+        if (qtyInput) qtyInput.value = Math.round(parseFloat(btn.dataset.qty));
+        if (revInput) revInput.value = Math.round(parseFloat(btn.dataset.total));
+      });
+    });
+    $('#tradeTableWrap').querySelectorAll('.confirm-sale-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = Number(btn.dataset.id);
+        const qtyInput = $('#tradeTableWrap').querySelector(`.sell-qty-input[data-id="${id}"]`);
+        const revInput = $('#tradeTableWrap').querySelector(`.sell-revenue-input[data-id="${id}"]`);
+        const qty = parseFloat(qtyInput.value);
+        const revenue = parseFloat(revInput.value);
+        if (isNaN(qty) || qty <= 0){
+          alert('Vul in hoeveel stuks je (deze keer) verkocht hebt.');
+          return;
+        }
+        if (isNaN(revenue)){
+          alert('Vul in voor hoeveel coins je dit verkocht hebt (dit mag ook lager zijn dan de kostprijs, bij verlies).');
+          return;
+        }
+        addSellToTrade(id, qty, revenue);
+      });
+    });
+    renderProfitChart();
+  }
+
+  function addSellToTrade(tradeId, qty, revenue){
+    const t = tradeLog.find(t => t.id === tradeId);
+    if (!t) return;
+    const st = tradeStats(t);
+    if (qty > st.remainingQty + 0.0001){
+      alert(`Je hebt nog maar ${fmtInt(st.remainingQty)}x over om te verkopen bij deze trade.`);
+      return;
+    }
+    t.sells.push({
+      id: t.sellIdCounter++,
+      qty, revenue,
+      time: new Date().toLocaleString('nl-NL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}),
+      timestamp: Date.now()
+    });
+    renderTradeLog();
+  }
+
+  // shared by the manual "+ Toevoegen" button and the recommendation "Zet in Mijn
+  // Trades" buttons — creates a trade (with an initial sell logged only if a revenue was
+  // given), refreshes the log, and switches to that tab.
+  function addToTradeLog(t){
+    const hasRevenue = t.revenue !== null && t.revenue !== undefined && !isNaN(t.revenue);
+    const sellableQty = (t.soldQty !== undefined && t.soldQty !== null && !isNaN(t.soldQty) && t.soldQty > 0)
+      ? t.soldQty : t.boughtQty;
+    const trade = {
+      id: tradeIdCounter++,
+      type: t.type, boughtItem: t.boughtItem, boughtQty: t.boughtQty, cost: t.cost,
+      soldItem: t.soldItem, sellableQty,
+      // richtprijs vanuit de aanbeveling (indien via "Zet in Mijn Trades" toegevoegd) —
+      // puur een aanwijzing van wat je in-game zou moeten proberen te halen, niet bindend
+      targetPricePerUnit: t.targetPricePerUnit || null,
+      targetProfit: t.targetProfit !== undefined ? t.targetProfit : null,
+      time: new Date().toLocaleString('nl-NL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}),
+      sellIdCounter: 1,
+      sells: []
+    };
+    if (hasRevenue){
+      trade.sells.push({
+        id: trade.sellIdCounter++,
+        qty: sellableQty, revenue: t.revenue,
+        time: trade.time, timestamp: Date.now()
+      });
+    }
+    tradeLog.push(trade);
+    renderTradeLog();
+    $$('.tab-btn').forEach(b=>b.classList.remove('active'));
+    $$('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="trades"]').classList.add('active');
+    document.getElementById('panel-trades').classList.add('active');
+  }
+
+  $('#tradeAddBtn').addEventListener('click', () => {
+    const type = $('#tradeType').value;
+    const boughtItem = $('#tradeBoughtItem').value.trim();
+    const boughtQty = parseFloat($('#tradeBoughtQty').value) || 0;
+    const cost = parseFloat($('#tradeCost').value) || 0;
+    const soldItemRaw = $('#tradeSoldItem').value.trim();
+    const soldItem = soldItemRaw || boughtItem; // bazaar flips: same item bought & sold
+    const soldQty = parseFloat($('#tradeSoldQty').value) || boughtQty;
+    const revenueRaw = $('#tradeRevenue').value.trim();
+    const revenue = revenueRaw === '' ? null : parseFloat(revenueRaw);
+    if (!boughtItem || cost <= 0){
+      alert('Vul minstens een gekocht item en een kostprijs in.');
+      return;
+    }
+    addToTradeLog({ type, boughtItem, boughtQty, cost, soldItem, soldQty, revenue });
+    $('#tradeBoughtItem').value = ''; $('#tradeBoughtQty').value = ''; $('#tradeCost').value = '';
+    $('#tradeSoldItem').value = ''; $('#tradeSoldQty').value = ''; $('#tradeRevenue').value = '';
+  });
+
+  $('#tradeClearBtn').addEventListener('click', () => {
+    if (tradeLog.length === 0) return;
+    if (confirm('Weet je zeker dat je alle gelogde trades wilt wissen?')){
+      tradeLog = [];
+      renderTradeLog();
+    }
+  });
+
+  $('#tradeExportBtn').addEventListener('click', () => {
+    if (tradeLog.length === 0){ alert('Nog niets om te exporteren.'); return; }
+    const header = 'Type,Gekocht item,Aantal gekocht,Kostprijs totaal,Kostprijs/stuk,Verkocht item,Aantal verkocht (deze verkoop),Verkoopprijs (deze verkoop),Winst (deze verkoop),Tijd gekocht,Tijd verkocht\n';
+    const rows = [];
+    tradeLog.forEach(t => {
+      const st = tradeStats(t);
+      if (t.sells.length === 0){
+        rows.push(`${t.type},"${t.boughtItem.replace(/"/g,'""')}",${Math.round(t.boughtQty)},${Math.round(t.cost)},${Math.round(st.costPerUnit)},"${t.soldItem.replace(/"/g,'""')}",,,,"${t.time}",`);
+      } else {
+        t.sells.forEach(s => {
+          const profit = s.revenue - s.qty * st.costPerUnit;
+          rows.push(`${t.type},"${t.boughtItem.replace(/"/g,'""')}",${Math.round(t.boughtQty)},${Math.round(t.cost)},${Math.round(st.costPerUnit)},"${t.soldItem.replace(/"/g,'""')}",${Math.round(s.qty)},${Math.round(s.revenue)},${Math.round(profit)},"${t.time}","${s.time}"`);
+        });
+      }
+    });
+    const blob = new Blob([header + rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'skyblock-trades-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- profit-over-time chart ----------
+  // one line = cumulative realized profit (every sell, across every trade, counts the
+  // moment it's logged) + a per-day breakdown list so "how much did I make today" is a
+  // glance away. Hand-rolled SVG (no external chart lib) with a hover crosshair+tooltip.
+  function computeDailyProfits(){
+    const byDay = {}; // dateKey -> {profit, count, timestamp}
+    tradeLog.forEach(t => {
+      const st = tradeStats(t);
+      t.sells.forEach(s => {
+        const d = new Date(s.timestamp);
+        const key = d.toISOString().slice(0,10);
+        if (!byDay[key]) byDay[key] = { profit: 0, count: 0, timestamp: s.timestamp, label: d.toLocaleDateString('nl-NL', {day:'2-digit', month:'2-digit'}) };
+        const profit = s.revenue - s.qty * st.costPerUnit;
+        byDay[key].profit += profit;
+        byDay[key].count += 1;
+        byDay[key].timestamp = Math.min(byDay[key].timestamp, s.timestamp);
+      });
+    });
+    return Object.keys(byDay).sort().map(k => ({ key: k, ...byDay[k] }));
+  }
+
+  function renderProfitChart(){
+    const daily = computeDailyProfits();
+    const chartWrap = $('#chartWrap');
+    const dailyWrap = $('#dailyListWrap');
+    if (daily.length === 0){
+      chartWrap.innerHTML = `<div class="chart-empty">Nog geen verkopen gelogd — zodra je een verkoop invult, verschijnt hier je winstlijn.</div>`;
+      dailyWrap.innerHTML = `<div class="chart-empty">—</div>`;
+      return;
+    }
+
+    // daily list (most recent first)
+    dailyWrap.innerHTML = daily.slice().reverse().map(d => `
+      <div class="daily-row">
+        <span><span class="d-date">${d.label}</span><span class="d-count">(${d.count}x verkocht)</span></span>
+        <span class="d-amt ${profitClass(d.profit)}">${d.profit >= 0 ? '+' : ''}${fmtCoins(d.profit)}</span>
+      </div>`).join('');
+
+    // cumulative line
+    let running = 0;
+    const points = daily.map(d => { running += d.profit; return { ...d, cumulative: running }; });
+
+    const W = 640, H = 220, padL = 60, padR = 16, padT = 16, padB = 30;
+    const innerW = W - padL - padR, innerH = H - padT - padB;
+    const minY = Math.min(0, ...points.map(p => p.cumulative));
+    const maxY = Math.max(0, ...points.map(p => p.cumulative));
+    const yRange = (maxY - minY) || 1;
+    const x = i => points.length > 1 ? padL + (i/(points.length-1)) * innerW : padL + innerW/2;
+    const y = v => padT + innerH - ((v - minY) / yRange) * innerH;
+
+    const linePath = points.map((p,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.cumulative).toFixed(1)}`).join(' ');
+    const zeroY = y(0).toFixed(1);
+    const areaPath = `M${x(0).toFixed(1)},${zeroY} ` + points.map((p,i) => `L${x(i).toFixed(1)},${y(p.cumulative).toFixed(1)}`).join(' ') + ` L${x(points.length-1).toFixed(1)},${zeroY} Z`;
+
+    // sparse x labels so they don't collide
+    const labelStep = Math.max(1, Math.ceil(points.length / 6));
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" id="profitSvg" style="overflow:visible;display:block;">`;
+    svg += `<line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>`;
+    svg += `<path d="${areaPath}" fill="var(--blue)" opacity="0.12" stroke="none"/>`;
+    svg += `<path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    points.forEach((p,i) => {
+      if (i % labelStep === 0 || i === points.length-1){
+        svg += `<text x="${x(i).toFixed(1)}" y="${H-8}" font-size="9.5" fill="var(--text-faint)" text-anchor="middle">${p.label}</text>`;
+      }
+      svg += `<circle class="pt" data-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(p.cumulative).toFixed(1)}" r="3.5" fill="var(--blue)" stroke="#0f1117" stroke-width="1.5"/>`;
+    });
+    svg += `<text x="${padL}" y="12" font-size="10" fill="var(--text-faint)">${fmtCoins(maxY)}</text>`;
+    svg += `<text x="${padL}" y="${H-padB+2}" font-size="10" fill="var(--text-faint)">${fmtCoins(minY)}</text>`;
+    svg += `<line class="crosshair" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="var(--text-faint)" stroke-width="1" stroke-dasharray="3,3" opacity="0"/>`;
+    svg += `</svg>`;
+    svg += `<div class="chart-tooltip" id="chartTooltip"></div>`;
+    chartWrap.innerHTML = svg;
+
+    const svgEl = $('#profitSvg');
+    const tooltip = $('#chartTooltip');
+    const crosshair = svgEl.querySelector('.crosshair');
+    svgEl.addEventListener('mousemove', (e) => {
+      const rect = svgEl.getBoundingClientRect();
+      const relX = ((e.clientX - rect.left) / rect.width) * W;
+      let nearest = 0, best = Infinity;
+      points.forEach((p,i) => { const d = Math.abs(x(i) - relX); if (d < best){ best = d; nearest = i; } });
+      const p = points[nearest];
+      crosshair.setAttribute('x1', x(nearest)); crosshair.setAttribute('x2', x(nearest));
+      crosshair.setAttribute('opacity', '1');
+      tooltip.style.opacity = '1';
+      tooltip.innerHTML = `<b>${p.label}</b><br>Die dag: <span style="color:${p.profit>=0?'var(--green)':'var(--red)'}">${p.profit>=0?'+':''}${fmtCoins(p.profit)}</span><br>Cumulatief: ${fmtCoins(p.cumulative)}`;
+      const px = (x(nearest)/W) * rect.width;
+      tooltip.style.left = Math.min(rect.width - 140, Math.max(0, px + 10)) + 'px';
+      tooltip.style.top = '6px';
+    });
+    svgEl.addEventListener('mouseleave', () => {
+      crosshair.setAttribute('opacity', '0');
+      tooltip.style.opacity = '0';
+    });
+  }
+
+  renderTradeLog();
+
+  // ---------- auto refresh countdown ----------
+  function tickCountdown(){
+    secondsLeft -= 1;
+    if (secondsLeft <= 0){
+      secondsLeft = REFRESH_SECONDS;
+      fetchBazaar();
+    }
+    $('#countdown').textContent = secondsLeft;
+  }
+  countdownTimer = setInterval(tickCountdown, 1000);
+
+  // initial load
+  fetchBazaar();
+  fetchItemMeta();
+})();
+</script>
+</body>
+</html>
