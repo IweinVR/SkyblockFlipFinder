@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skyblock Flip Finder — Bazaar &amp; Craft Winst</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Skyblock Flip Finder</h1>
+    <p class="sub">Live Hypixel Bazaar data — vind bazaar-flips en craft/compact-flips met het beste winstpotentieel.</p>
+    <div class="status-row">
+      <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Nog niet geladen</span></div>
+      <div class="status-pill">⏱ Auto-refresh: <span id="countdown">—</span>s</div>
+      <button id="refreshBtn">Nu verversen</button>
+    </div>
+  </div>
+  <div class="market-status-box" id="marketStatusBox" title="Live systeemstatus van deze app zelf (databronnen/requests), niet van Hypixel.">
+    <div class="msb-title">Market Status</div>
+    <div class="msb-row"><span class="msb-key">API Status</span><span class="msb-val" id="msbApiStatus">—</span></div>
+    <div class="msb-row"><span class="msb-key">Requests/min</span><span class="msb-val" id="msbReqRate">0/120</span></div>
+    <div class="msb-row"><span class="msb-key">Ping</span><span class="msb-val" id="msbPing">—</span></div>
+    <div class="msb-row"><span class="msb-key">Est. market vol</span><span class="msb-val" id="msbMarketVol">—/hr</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="bazaar">Bazaar Flips</button>
+    <button class="tab-btn" data-tab="craft">Craft / Compact Flips</button>
+    <button class="tab-btn" data-tab="trades">Mijn Trades</button>
+    <button class="tab-btn" data-tab="auctions">Auction House</button>
+    <button class="tab-btn" data-tab="ahflip">AH Flip-scanner</button>
+    <button class="tab-btn" data-tab="npcscan">NPC-verkoop</button>
+    <button class="tab-btn" data-tab="petflip">Pet Flips</button>
+    <button class="tab-btn" data-tab="essenceflip">Essence Flips</button>
+    <button class="tab-btn" data-tab="enchant">Item Maxen</button>
+    <button class="tab-btn" data-tab="info">Uitleg</button>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="ah-flipper-header">
+      <h3>Dashboard — marktoverzicht</h3>
+      <span class="hint">Live samenvatting op basis van dezelfde berekeningen als de andere tabbladen — geen extra API-calls, ververst automatisch mee met elke bazaar-refresh (5s) en elke Auction House-scan. "Beste flip nu" en de grafieken hieronder gaan uit van een vast referentiebudget van €1.000.000 (los van wat je op de Bazaar/Craft-tabbladen hebt ingevuld), maar respecteren wel je tax%- en manipulatie-filterinstelling daar.</span>
+    </div>
+    <div id="dashEmptyState" class="empty-state">Data wordt geladen...</div>
+    <div id="dashContent" style="display:none;">
+      <div class="stat-cards" id="dashStatCards"></div>
+      <div class="dash-charts-grid">
+        <div class="chart-panel">
+          <h3>Top Bazaar Flips</h3>
+          <div class="chart-sub">Hoogste verwachte totale winst bij €1.000.000 budget</div>
+          <div id="dashTopBazaar"></div>
+        </div>
+        <div class="chart-panel">
+          <h3>Top Craft Flips</h3>
+          <div class="chart-sub">Hoogste verwachte totale winst bij €1.000.000 budget (160x compact-regel)</div>
+          <div id="dashTopCraft"></div>
+        </div>
+        <div class="chart-panel">
+          <h3>Categorieën — gemiddelde margin%</h3>
+          <div class="chart-sub">Gemiddelde margin% van winstgevende flips per categorie (min. 2 items)</div>
+          <div id="dashCategoryMargins"></div>
+        </div>
+        <div class="chart-panel">
+          <h3>Markt-gezondheid</h3>
+          <div class="chart-sub">Aandeel bazaar-items dat de manipulatie-/liquiditeitsfilter doorstaat</div>
+          <div id="dashMarketHealth"></div>
+        </div>
+        <div class="chart-panel" style="grid-column:1 / -1;">
+          <h3>Mijn winst per dag</h3>
+          <div class="chart-sub">Laatste 10 dagen met gelogde verkopen (Mijn Trades)</div>
+          <div id="dashDailyProfit"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAZAAR TAB -->
+  <div class="panel" id="panel-bazaar">
+    <div class="controls">
+      <div class="field grow">
+        <label>Zoeken</label>
+        <input type="text" id="bazaarSearch" placeholder="bv. enchanted, diamond...">
+      </div>
+      <div class="field">
+        <label>Budget per flip (coins)</label>
+        <input type="number" id="bazaarBudget" value="1000000" step="100000" min="0">
+      </div>
+      <div class="field">
+        <label>Max aantal (stuks)</label>
+        <input type="number" id="bazaarMaxQty" value="" step="1000" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 70000 om niet te veel te flippen</span>
+      </div>
+      <div class="field">
+        <label>Min. weekvolume</label>
+        <input type="number" id="bazaarMinVol" value="10000" step="1000" min="0">
+        <span class="hint">filtert illiquide items</span>
+      </div>
+      <div class="field">
+        <label>Categorie</label>
+        <select id="bazaarCategory"><option value="">Alle categorieën</option></select>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="bazaarTax" checked>
+        <label for="bazaarTax">Flipper tax (<span class="tax-pct-bazaar">1.25</span>%) toepassen op verkoop</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="bazaarSafe" checked>
+        <label for="bazaarSafe">Verwijder verdachte/gemanipuleerde items &amp; dunne orderboeken</label>
+      </div>
+      <div class="spacer"></div>
+    </div>
+    <div id="bazaarRecommend"></div>
+    <div class="count-tag" id="bazaarCount"></div>
+    <div id="bazaarTableWrap"></div>
+  </div>
+
+  <!-- CRAFT TAB -->
+  <div class="panel" id="panel-craft">
+    <p class="trade-note" style="margin-top:0;">Meestal 1 staps-compacten (160x grondstof → 1x enchanted item). Items met een blauw <span class="chain-tag" style="margin-left:0;">2-staps</span>-label zijn een échte 2-staps keten (bv. Enchanted Iron → Enchanted Iron Block) — automatisch herkend via de bazaar-productnamen zelf, want Hypixel's publieke item-API bevat geen crafting-recepten (meer). Klik zo'n rij open voor het orderboek van elke stap.</p>
+    <div class="controls">
+      <div class="field grow">
+        <label>Zoeken</label>
+        <input type="text" id="craftSearch" placeholder="bv. bread, coal...">
+      </div>
+      <div class="field">
+        <label>Budget (coins)</label>
+        <input type="number" id="craftBudget" value="1000000" step="100000" min="0">
+      </div>
+      <div class="field">
+        <label>Max aantal crafts</label>
+        <input type="number" id="craftMaxQty" value="" step="10" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 20 crafts (= 20x160 grondstof)</span>
+      </div>
+      <div class="field">
+        <label>Max aantal grondstof</label>
+        <input type="number" id="craftMaxRaw" value="" step="160" min="0" placeholder="geen limiet">
+        <span class="hint">bv. 5000 (rechtstreeks in ruwe stuks, ipv crafts)</span>
+      </div>
+      <div class="field">
+        <label>Min. weekvolume (enchanted item)</label>
+        <input type="number" id="craftMinVol" value="1000" step="500" min="0">
+      </div>
+      <div class="field">
+        <label>Categorie</label>
+        <select id="craftCategory"><option value="">Alle categorieën</option></select>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="craftTax" checked>
+        <label for="craftTax">Flipper tax (<span class="tax-pct-craft">1.25</span>%) toepassen op verkoop</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="craftSafe" checked>
+        <label for="craftSafe">Verwijder verdachte/gemanipuleerde items &amp; dunne orderboeken</label>
+      </div>
+      <div class="spacer"></div>
+    </div>
+    <div id="craftRecommend"></div>
+    <div class="count-tag" id="craftCount"></div>
+    <div id="craftTableWrap"></div>
+  </div>
+
+  <!-- TRADES TAB -->
+  <div class="panel" id="panel-trades">
+    <div class="trade-summary">
+      <div class="stat"><span class="lbl">Trades gelogd</span><span class="val" id="tradeCount">0</span></div>
+      <div class="stat"><span class="lbl">Nog niet (volledig) verkocht</span><span class="val" id="tradeOpenCount">0</span></div>
+      <div class="stat"><span class="lbl">Totale winst (gerealiseerd)</span><span class="val" id="tradeTotal">0</span></div>
+      <div class="stat"><span class="lbl">Gem. winst/verkoop</span><span class="val" id="tradeAvg">—</span></div>
+    </div>
+    <div class="chart-row" style="display:flex;gap:16px;flex-wrap:wrap;align-items:stretch;">
+      <div class="chart-panel" style="flex:2 1 480px;">
+        <h3>Winst over tijd</h3>
+        <div class="chart-sub">Cumulatieve gerealiseerde winst (elk verkoopmoment telt mee, ook deelverkopen)</div>
+        <div class="chart-svg-wrap" id="chartWrap"></div>
+      </div>
+      <div class="chart-panel" style="flex:1 1 260px;">
+        <h3>Winst per dag</h3>
+        <div class="chart-sub">Hoeveel je die dag hebt verdiend (of verloren)</div>
+        <div class="daily-list" id="dailyListWrap"></div>
+      </div>
+      <div class="chart-panel" style="flex:1 1 220px;">
+        <h3>Winst per type</h3>
+        <div class="chart-sub">Bazaar- vs. craft-flips (gerealiseerde winst)</div>
+        <div id="tradeTypeDonut"></div>
+      </div>
+    </div>
+    <p class="trade-note">Dit logje leeft alleen in dit browsertabblad — bij een pagina-refresh gaat het verloren. Exporteer als CSV om het te bewaren. Gebruik de "Zet in Mijn Trades"-knop bij een aanbeveling om 'm meteen als "gekocht, nog niet verkocht" hier te zetten. Je kan een trade in delen verkopen: vul in hoeveel je nu verkocht hebt en voor hoeveel — de rest blijft "nog niet verkocht" staan totdat je ook dát deel invult. Winst (of verlies) wordt per verkoop apart berekend.</p>
+    <div class="controls">
+      <div class="field">
+        <label>Type</label>
+        <select id="tradeType">
+          <option value="bazaar">Bazaar flip</option>
+          <option value="craft">Craft flip</option>
+        </select>
+      </div>
+      <div class="field grow">
+        <label>Gekocht item</label>
+        <input type="text" id="tradeBoughtItem" placeholder="bv. Sugar Cane">
+      </div>
+      <div class="field">
+        <label>Aantal gekocht</label>
+        <input type="number" id="tradeBoughtQty" step="1" min="0" placeholder="32000">
+      </div>
+      <div class="field">
+        <label>Totale kostprijs (coins)</label>
+        <input type="number" id="tradeCost" step="1000" min="0" placeholder="99200">
+      </div>
+      <div class="field grow">
+        <label>Verkocht item</label>
+        <input type="text" id="tradeSoldItem" placeholder="bv. Enchanted Sugar Cane">
+      </div>
+      <div class="field">
+        <label>Aantal nu verkocht</label>
+        <input type="number" id="tradeSoldQty" step="1" min="0" placeholder="200 (mag minder zijn dan gekocht)">
+      </div>
+      <div class="field">
+        <label>Verkoopprijs (deze verkoop)</label>
+        <input type="number" id="tradeRevenue" step="1000" min="0" placeholder="leeg = nog niet verkocht">
+      </div>
+      <button class="primary" id="tradeAddBtn">+ Toevoegen</button>
+      <div class="spacer"></div>
+      <button id="tradeExportBtn">Exporteer CSV</button>
+      <button id="tradeClearBtn">Alles wissen</button>
+    </div>
+    <div id="tradeTableWrap"></div>
+  </div>
+
+  <!-- AUCTION HOUSE TAB -->
+  <div class="panel" id="panel-auctions">
+    <button class="monitor-exit-btn" id="aucExitMonitorBtn">✕ Monitor modus verlaten (Esc)</button>
+    <div class="controls">
+      <div class="field grow">
+        <label>Item toevoegen aan watchlist</label>
+        <input type="text" id="aucItemInput" placeholder="bv. Hyperion, Midas' Sword...">
+      </div>
+      <div class="field">
+        <label>Alert onder prijs (BIN)</label>
+        <input type="text" inputmode="decimal" id="aucAlertInput" placeholder="bv. 1m of 500k">
+        <span class="hint">1k = 1.000, 1m = 1.000.000 — waarschuwt ook bij veiling &lt;30 min</span>
+      </div>
+      <button class="primary" id="aucAddBtn">+ Toevoegen</button>
+      <div class="spacer"></div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="aucAutoScan">
+        <label for="aucAutoScan">Automatisch elke 10s scannen</label>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="aucSoundAlert" checked>
+        <label for="aucSoundAlert">Geluid bij alert</label>
+      </div>
+      <button id="aucMonitorBtn">Monitor modus (2e scherm)</button>
+      <button class="primary auc-scan-btn" id="aucScanBtn">Zoeken in Auction House</button>
+    </div>
+    <div class="chip-row" id="aucWatchlist"></div>
+    <p class="trade-note auc-status-text" id="aucStatus">Voeg items toe (naam óf item-ID, bv. "Hyperion" of "HYPERION") aan je watchlist en klik op "Zoeken" om alle actieve veilingen te doorzoeken. Dit doorzoekt de héle Auction House (tientallen pagina's), dus een scan kan even duren. Zet "Automatisch scannen" aan om dit als een levend dashboard te laten draaien. (Elke scan hier vult ook meteen de AH Flip-scanner en NPC-verkoop tabbladen.)</p>
+    <div class="auc-progress-wrap" id="aucProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" id="aucProgressFill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text" id="aucProgressText"></div>
+    </div>
+    <div class="ticker-strip" id="aucTicker" style="display:none;"></div>
+    <div id="aucAlertBanner"></div>
+    <div id="aucTableWrap"></div>
+  </div>
+
+  <!-- AH FLIP-SCANNER TAB -->
+  <div class="panel" id="panel-ahflip">
+    <div class="ah-flipper-header">
+      <h3>AH Flip-scanner (hele Auction House)</h3>
+      <span class="hint">Scant élke actieve BIN-veiling — niet alleen je watchlist — maar uitsluitend voor items die ook op de bazaar verhandeld worden (enchanted items, grondstoffen enz.). Dat zijn altijd identieke, stapelbare items zonder enchants/reforges/sterren, dus een eerlijke prijsvergelijking is mogelijk. Wapens, armor en pets worden bewust overgeslagen — die kan de tool niet betrouwbaar vergelijken zonder de volledige item-NBT te lezen (verschillende enchants/reforges maken "dezelfde" veiling soms totaal andere waarde). Twee soorten kansen: een BIN die duidelijk goedkoper is dan de eerstvolgende BIN van hetzelfde item (herverkoop op de AH), of een BIN die goedkoper is dan wat je er nu voor krijgt op de bazaar (arbitrage). Kom dit zelden of nooit tegen? Logisch — de meeste spelers verkopen zulke items meteen via de bazaar, dus dit zijn de uitzonderingen (fouten, haast, onwetendheid) — maar als je 'm vindt is het bijna altijd direct, makkelijk profijt. Let op: exclusief AH-plaatsingskosten voor het herverkopen.</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="ahFlipScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="ahFlipStatus">Klik op "Scan" om de héle Auction House te doorzoeken (dit is dezelfde scan als op het Auction House-tabblad — je hoeft het niet twee keer te doen).</p>
+    <div class="auc-progress-wrap" id="ahFlipProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div id="aucFlipperTableWrap"></div>
+  </div>
+
+  <!-- NPC-VERKOOP SCANNER TAB -->
+  <div class="panel" id="panel-npcscan">
+    <div class="ah-flipper-header">
+      <h3>NPC-verkoop scanner</h3>
+      <span class="hint">Doorzoekt zowel de bazaar (live, elke ~5 seconden) als de Auction House (bij een scan) op items die je nu goedkoper kan kopen dan de NPC-verkoopprijs — 100% risicovrij, direct te verzilveren door in-game aan een NPC te verkopen. NPC-prijzen komen uit de ingebouwde standaardlijst en je eigen aanpassingen (te vinden en te bewerken onder Instellingen in het Uitleg-tabblad). Het bazaar-gedeelte is altijd actueel; het AH-gedeelte toont de laatste scan (via het Auction House- of AH Flip-scanner-tabblad).</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="npcScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="npcScanStatus">Bazaar-kant is live. Klik op "Scan" om ook de Auction House mee te nemen.</p>
+    <div class="auc-progress-wrap" id="npcScanProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div id="npcScanTableWrap"></div>
+  </div>
+
+  <!-- PET FLIPS TAB -->
+  <div class="panel" id="panel-petflip">
+    <div class="ah-flipper-header">
+      <h3>Pet Flips — Force-level &amp; Kat-upgrade</h3>
+      <span class="hint">Twee onafhankelijke pet-flip-kansen op basis van dezelfde AH-scan als de andere scanner-tabbladen. <strong>Force-level</strong>: koop een goedkope lage-level pet, voer 'm met pet-candy (Pet Cake of Chyme, live bazaarprijs, automatisch de goedkoopste van de twee) naar level 100, en verkoop 'm weer — hieronder zie je automatisch elk gevonden paar (lage-level BIN + level 100-BIN van dezelfde pet/rarity). Carrot Candy is bewust niet meegenomen: die mag maar 10x per pet gevoerd worden, dus niet geschikt om een pet in één keer volledig te forcen. <strong>Kat-upgrade</strong>: vergelijk zelf de AH-prijs van een pet in twee rarities, min. de Kat-fee en materiaalkosten die je zelf invult (die verschillen te veel per pet-type om automatisch te berekenen). Let op: de benodigde XP t/m level 100 hieronder komt uit community-reverse-engineering, geen officiële Hypixel-data — check bij twijfel zelf in-game en pas de getallen gerust aan.</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="petFlipScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="petFlipStatus">Klik op "Scan" om de héle Auction House te doorzoeken (dezelfde scan als op de andere scanner-tabbladen — je hoeft het niet twee keer te doen).</p>
+    <div class="auc-progress-wrap" id="petFlipProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div class="count-tag" id="petFlipCount"></div>
+    <div id="petFlipTableWrap"></div>
+
+    <div class="settings-box" style="margin-top:20px;">
+      <h3>XP tot level 100 per rarity (schatting — pas aan indien nodig)</h3>
+      <div id="petXpTableWrap"></div>
+      <button id="petXpResetBtn" style="margin-top:4px;">Herstel standaardwaarden</button>
+    </div>
+
+    <div class="settings-box" style="margin-top:20px;">
+      <h3>Kat rarity-upgrade calculator</h3>
+      <div class="npc-add-row">
+        <input type="text" id="katPetNameInput" placeholder="Pet-naam, bv. Golden Dragon">
+      </div>
+      <div id="katPriceTableWrap"></div>
+      <div class="controls" style="margin-top:10px;">
+        <div class="field"><label>Van rarity</label><select id="katFromRarity"></select></div>
+        <div class="field"><label>Naar rarity</label><select id="katToRarity"></select></div>
+        <div class="field"><label>Kat-fee (coins)</label><input type="number" id="katFeeInput" step="1000" min="0" placeholder="0"></div>
+        <div class="field"><label>Materiaalkosten (coins)</label><input type="number" id="katMaterialInput" step="1000" min="0" placeholder="0"></div>
+      </div>
+      <div id="katResultWrap"></div>
+    </div>
+  </div>
+
+  <!-- ESSENCE FLIPS TAB -->
+  <div class="panel" id="panel-essenceflip">
+    <div class="ah-flipper-header">
+      <h3>Essence Flips — clean kopen, 5★ verkopen</h3>
+      <span class="hint">Koop een "clean" (0★) dungeon-item op de AH, koop de benodigde Essence op de bazaar om 'm naar 5★ te upgraden via de Essence Shop in-game, en verkoop 'm weer als 5★ op de AH. Clean- en 5★-paren worden automatisch herkend tijdens dezelfde AH-scan als de andere scanner-tabbladen (via de ✪-symbolen in de itemnaam — geen giswerk). Let op: de <strong>hoeveelheid</strong> Essence per item staat bewust NIET vooringevuld — die cijfers wijzigen regelmatig door balans-patches en community-bronnen spreken elkaar daarover tegen. Vul 'm 1x per item in bij Instellingen hieronder (kijk in-game bij de Essence Shop hoeveel je nodig hebt) — de app onthoudt 'm daarna. Het essence-<em>type</em> per item staat wel voorgeladen (op basis van de Hypixel Skyblock wiki), en kan je net als bij de NPC-prijzen zelf aanpassen of aanvullen. Winst is exclusief AH-plaatsingskosten voor herverkoop.</span>
+    </div>
+    <div class="controls">
+      <button class="primary auc-scan-btn" id="essenceFlipScanBtn">Scan Auction House</button>
+    </div>
+    <p class="trade-note auc-status-text" id="essenceFlipStatus">Klik op "Scan" om de héle Auction House te doorzoeken (dezelfde scan als op de andere scanner-tabbladen — je hoeft het niet twee keer te doen).</p>
+    <div class="auc-progress-wrap" id="essenceFlipProgressWrap" style="display:none;">
+      <div class="progress-bar"><div class="fill auc-progress-fill" style="width:0%;"></div></div>
+      <div class="progress-text auc-progress-text"></div>
+    </div>
+    <div class="count-tag" id="essenceFlipCount"></div>
+    <div id="essenceFlipTableWrap"></div>
+
+    <div class="settings-box" style="margin-top:20px;">
+      <h3>Items &amp; essence-kosten (0★ → 5★)</h3>
+      <div id="starItemSettingsWrap"></div>
+      <div class="npc-add-row" style="margin-top:10px;">
+        <input type="text" id="starItemNameInput" placeholder="Itemnaam, exact zoals op de AH, bv. Hyperion">
+        <select id="starItemTypeInput">
+          <option value="WITHER">Wither Essence</option>
+          <option value="SPIDER">Spider Essence</option>
+          <option value="UNDEAD">Undead Essence</option>
+          <option value="DRAGON">Dragon Essence</option>
+          <option value="GOLD">Gold Essence</option>
+          <option value="DIAMOND">Diamond Essence</option>
+          <option value="ICE">Ice Essence</option>
+        </select>
+        <input type="number" id="starItemAmountInput" placeholder="Benodigd 0★→5★" min="0" step="1" style="width:150px;">
+        <button id="starItemAddBtn">+ Toevoegen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITEM MAXEN (ENCHANT OPTIMIZER) TAB -->
+  <div class="panel" id="panel-enchant">
+    <div class="enchant-header">
+      <h3>Item Maxen — enchant-configurator</h3>
+      <span class="hint">Kies een itemtype en zie alle mogelijke enchants ervoor, gegroepeerd per "conflictgroep" (enchants die elkaar uitsluiten — je kiest er maar één per groep). Hover over het ⓘ-icoontje voor uitleg wat een enchant precies doet. Per enchant kan je zelf het gewenste level kiezen (dus ook lager dan max, bv. Sharpness III) én invullen wat je er nu al op hebt staan — de tool rekent dan alleen de kost voor de upgrade en tipt onderaan de goedkoopste volgende stap. Kies daarnaast optioneel één Ultimate-enchant (max 1 per item), en voeg onderaan eventueel gemstones en reforge stones toe die je ook wilt meetellen. De tool telt live de bazaar-instant-koopprijs van alles bij elkaar op tot een totale "max-kost". Let op: dit is géén officiële Hypixel-data — samengesteld op basis van de Hypixel Skyblock wiki, kan verouderd zijn of zeldzame/nieuwe enchants missen, en de omschrijvingen zijn vereenvoudigd (geen letterlijke in-game tekst); check bij twijfel zelf in-game. Reforge stones die alleen via drops/dungeons te krijgen zijn zie je ter referentie, maar tellen alleen mee in het totaal als er een vaste NPC-prijs bekend is.</span>
+    </div>
+    <div class="enchant-controls">
+      <label for="enchantItemType" style="font-size:12.5px;color:var(--text-dim);">Itemtype:</label>
+      <select id="enchantItemType"></select>
+    </div>
+    <div class="enchant-layout">
+      <div class="enchant-groups" id="enchantGroups"></div>
+      <div class="enchant-summary" id="enchantSummary"></div>
+    </div>
+  </div>
+
+  <!-- INFO TAB -->
+  <div class="panel" id="panel-info">
+    <div class="settings-box">
+      <h3>Instellingen</h3>
+      <div class="settings-row">
+        <label for="settingsFlipperTax">Jouw persoonlijke flipper tax (%)</label>
+        <input type="number" id="settingsFlipperTax" step="0.01" min="0" max="100" style="width:90px;">
+        <span class="hint">Standaard 1.25% — hangt af van je Bazaar-level, fame, account-upgrades en de actieve Mayor. Wordt overal in de app gebruikt i.p.v. het vaste percentage, en bewaard in je browser.</span>
+      </div>
+      <div class="settings-row">
+        <label>NPC-verkoopprijzen (voor de risicovrije NPC-scanner hieronder)</label>
+        <div class="npc-add-row">
+          <input type="text" id="npcItemInput" placeholder="item-ID, bv. ENCHANTED_SNOW_BLOCK">
+          <input type="number" id="npcPriceInput" placeholder="NPC-prijs per stuk" min="0" step="0.1">
+          <button id="npcAddBtn">+ Toevoegen</button>
+        </div>
+        <div class="chip-row" id="npcList"></div>
+        <span class="hint">Er zit een ingebouwde standaardlijst in met bekende NPC-verkoopprijzen (o.a. alle enchanted farming/mining/mob-drops) — die wordt automatisch aangevuld zodra de itemdatabase geladen is. NPC-prijzen zijn al jaren erg stabiel in Skyblock, maar check bij twijfel altijd zelf de prijs in-game. Klopt een prijs niet meer, of mis je een item? Pas 'm hieronder aan of voeg 'm toe (het item-ID vind je bv. bovenaan de Bazaar-tabel bij het item) — je eigen aanpassingen worden nooit overschreven. Zodra de instant-koopprijs op de bazaar onder de NPC-prijs zakt, licht dat item felgroen op bovenaan de Bazaar Flips-tabel — dat is dan 100% risicovrije winst (kopen op bazaar, direct verkopen aan de NPC, geen flipper tax).</span>
+      </div>
+    </div>
+    <div class="info-box">
+      <p><strong>Bazaar Flips</strong> — Dit zijn "order flips": je plaatst een <strong>buy order</strong> op de huidige <em>Instant Sell</em>-prijs om 'm snel gevuld te krijgen, en zodra je het item hebt zet je 'm terug in de bazaar als <strong>sell order</strong> op de huidige <em>Instant Buy</em>-prijs. Winst = Instant Buy − Instant Sell, min. eventuele flipper tax.</p>
+      <p><strong>Craft / Compact Flips</strong> — De klassieke Skyblock-truc: 160 grondstoffen kosten vaak minder dan de <code>ENCHANTED_</code>-versie van datzelfde item waard is op de bazaar. Je koopt 160x de grondstof, craft 'm om (via de enchanting-tafel / craft-tabel) tot het enchanted item, en verkoopt dat weer op de bazaar. Deze tool scant automatisch alle items waarvoor dat mogelijk is.</p>
+      <p><strong>Let op liquiditeit</strong> — Een grote spread op een item met weinig weekvolume is vaak een valkuil: er zijn simpelweg te weinig kopers/verkopers om je order snel (of helemaal) gevuld te krijgen. Gebruik het volumefilter en check de "vol/week" kolom voordat je groot inzet.</p>
+      <p><strong>Filter voor manipulatie &amp; dunne orderboeken</strong> — Standaard aan: items worden uitgesloten als er te weinig losse orders op de bazaar staan (minder dan 3 kopers/verkopers), als er maar 1 prijslaag in het orderboek zit, of als de bovenste order abnormaal (&gt;35%) afwijkt van de eerstvolgende laag — een klassiek signaal dat iemand met één order de prijs kunstmatig heeft opgedreven. Ook items met een kleine "backlog" (weinig coins/stuks die daadwerkelijk in open orders staan) worden dan weggefilterd, want die kun je in de praktijk niet betrouwbaar vullen.</p>
+      <p><strong>Prijzen zijn "echt" doorgerekend</strong> — De tool gebruikt niet zomaar de bovenste (soms gemanipuleerde) orderprijs, maar loopt écht door het orderboek heen voor de hoeveelheid die jij wilt kopen/verkopen (begrensd door je budget en/of "Max aantal"). Zo wordt een enkele nep-order met een absurde prijs automatisch verdund zodra je een realistisch aantal opvraagt, en zie je de prijs die je daadwerkelijk zou krijgen — niet een theoretisch getal.</p>
+      <p><strong>Bescherming tegen "muren" van nep-orders</strong> — Sommige spelers stapelen meerdere orders vlak boven een realistische prijs om flip-tools zoals deze te misleiden (bv. een reeks orders rond 4.700 coins terwijl de eerstvolgende écht actieve order 1.350 coins is). Daarom kijkt de tool ook wat er gebeurt als je 3x dieper in het orderboek zou gaan dan nodig — wijkt die prijs meer dan 40% af, dan wordt het item uitgesloten. Daarnaast wordt elke flip met een margin boven de 150% automatisch uitgesloten, want dat komt in de praktijk vrijwel nooit voor bij een écht vulbare flip — dat is bijna altijd een lokmiddel, een bug, of verouderde data. Check bij twijfel altijd zelf de actuele orders in-game voordat je een flip uitvoert.</p>
+      <p><strong>Max aantal / max crafts / max grondstof</strong> — Vul dit in als je bewust klein wilt blijven (bv. maar 70.000 stuks flippen in plaats van je hele budget erin te gooien). Bij Craft/Compact Flips kan dat op twee manieren: "Max aantal crafts" (in aantal eindproducten, x160 grondstof) óf "Max aantal grondstof" (rechtstreeks in ruwe stuks, bv. max 5.000 Honeycomb) — vul je beide in, dan geldt de strengste van de twee. Laat leeg voor geen limiet (dan bepaalt alleen je budget en de marktdiepte hoeveel je kunt doen).</p>
+      <p><strong>⏳ Stabiliteit over meerdere refreshes</strong> — Elke keer dat de app ververst (elke 5 seconden) onthoudt hij de prijs per item. Een flip krijgt pas het groene "Stabiel"-label zodra 'ie minstens 3 refreshes achter elkaar (~15 seconden) een vergelijkbare prijs laat zien. Springt de prijs plots weg of duikt een flip maar één keer op, dan zie je "⏳ Nieuw" — dat is precies het gedrag van een lokorder die snel weer verdwijnt. De aanbeveling bovenaan gebruikt bij voorkeur alleen stabiele flips; is er geen enkele stabiele optie, dan zie je een oranje (in plaats van groene) aanbeveling met een duidelijke waarschuwing.</p>
+      <p><strong>Categorieën</strong> — Items zijn nu ingedeeld op categorie (Farming, Mining, Combat, enz.) met een icoontje, opgehaald via de officiële Hypixel item-database. Filter op categorie om bijvoorbeeld alleen farming-flips te zien.</p>
+      <p><strong>Mijn Trades</strong> — Log je eigen flips met een apart "gekocht item/aantal/prijs" en "verkocht item/aantal/prijs", zodat ook craft-flips (bv. 32.000x Honeycomb kopen → omcraften → 200x Enchanted Honeycomb verkopen) er correct in passen. Klik op "Zet in Mijn Trades" bij een aanbeveling om 'm automatisch in het logje te zetten, of vul het handmatig in na je eigen flip. Je kan een trade ook in delen verkopen — vul steeds in hoeveel je nu verkocht hebt en voor hoeveel, de rest blijft "nog niet verkocht" totdat je dat ook invult, en winst/verlies wordt per verkoop apart bijgehouden. Exporteer als CSV om je geschiedenis te bewaren — het logje zelf gaat verloren bij een pagina-refresh.</p>
+      <p><strong>Winst over tijd</strong> — Boven de trades-tabel zie je een lijngrafiek met je cumulatieve gerealiseerde winst (hover erover voor de details per dag) en een lijstje met precies hoeveel je per dag hebt verdiend of verloren.</p>
+      <p><strong>Auction House</strong> — Voeg items toe aan je watchlist via naam óf item-ID (bv. "Hyperion" of "HYPERION"), optioneel met een alert-prijs die ook shorthand aanvaardt (1k, 500k, 1.5m). Klik op "Zoeken" om de hele Auction House te doorzoeken (via de officiële, sleutelloze Hypixel Auctions API). Herkende items krijgen er automatisch een icoontje bij. Per item zie je in een overzichtelijke, beurs-achtige tabel de laagste BIN-prijs (Buy It Now, direct kopen) én de laagste actieve veiling (waar je zou moeten bieden), allebei met hoeveel tijd er nog op staat, plus een tickerbalk bovenaan met de laatste prijs en of die sinds de vorige scan omhoog of omlaag ging. Is er van dat item nog een andere, duurdere veiling die eerder afloopt dan de goedkoopste? Dan zie je dat er meteen bij, in dezelfde "laagste veiling"-cel.</p>
+      <p><strong>Alerts</strong> — Vul bij een item een "alert onder prijs" in: zodra er een BIN verschijnt die goedkoper is, licht die rij rood op (met geluid, indien aangevinkt). Dat is de enige trigger voor een alert — een veiling die bijna afloopt geeft geen alert meer (wordt wel nog gewoon getoond in de tabel, als info). De "laagste veiling" (het bod-gedeelte, niet de BIN) toont bovendien nooit meer een veiling die verder dan 2 dagen in de toekomst afloopt — die zijn toch niet bruikbaar om nu op te bieden.</p>
+      <p><strong>AH ↔ Bazaar arbitrage</strong> — Voor elk item op je watchlist dat ook op de bazaar verhandeld wordt, vergelijkt de tool automatisch de laagste BIN-prijs met wat je er nú voor zou krijgen op de bazaar (min. je flipper tax). Is de BIN goedkoper dan de bazaar-verkoopprijs? Dan zie je een groene "Arbitrage"-melding in de BIN-cel: direct, risicoarme winst door op de AH te kopen en meteen op de bazaar te verkopen. Let op: dit gaat uit van 1 stuk per veiling — check zelf de stack-grootte in-game voor je koopt, en houd er rekening mee dat een BIN al weg kan zijn tegen de tijd dat je het item opent.</p>
+      <p><strong>NPC-scanner (zero-risk)</strong> — Bevat een ingebouwde standaardlijst met bekende NPC-verkoopprijzen (o.a. alle enchanted farming/mining/mob-drops), zichtbaar en aanpasbaar onder Instellingen bovenaan dit tabblad. Zodra de instant-koopprijs op de bazaar onder de NPC-prijs van zo'n item zakt, verschijnt het felgroen bovenaan de Bazaar Flips-tabel: je koopt op de bazaar en verkoopt direct aan een NPC in-game voor gegarandeerde winst, zonder flipper tax en zonder te wachten tot een sell-order gevuld wordt. NPC-prijzen zijn historisch stabiel, maar check bij twijfel zelf de prijs in-game; je kan elke prijs aanpassen of eigen items toevoegen.</p>
+      <p><strong>Item Maxen (enchant-configurator)</strong> — Kies een itemtype (Sword, Bow, Helmet/Chestplate/Leggings/Boots, Pickaxe, Axe, Hoe of Fishing Rod) en zie alle enchants die daarop kunnen, gegroepeerd per conflictgroep (enchants die elkaar uitsluiten, bv. Sharpness/Smite/Bane of Arthropods — je kiest er maar 1) met een ⓘ-tooltip die uitlegt wat elke enchant doet. Je kiest zelf het gewenste level (ook lager dan max, bv. Sharpness III) en kan invullen wat je er nu al op hebt staan — de tool telt dan alleen de kost van de resterende upgrade en tipt de goedkoopste volgende stap. Kies er optioneel 1 Ultimate-enchant bij (er kan er maar 1 per item op zitten), en voeg gemstones en reforge stones toe om die ook mee te tellen. De tool zoekt live de bazaar-instant-koopprijs op en telt alles op tot een totale kostprijs om het item te "maxen". Dit is een hulptool op basis van community-wikidata, geen officiële Hypixel-bron — namen/max-levels/omschrijvingen kunnen ondertussen gewijzigd zijn, en sommige zeldzame enchants of reforge stones (drops/dungeon-loot zonder vaste NPC-prijs) worden daarom niet automatisch geprijsd.</p>
+      <p><strong>Monitor modus</strong> — Voor op een tweede scherm: verbergt alle andere tabbladen/besturing en toont alleen een grote, glanceable versie van de tabel en tickerbalk in fullscreen. Zet "Automatisch elke 10s scannen" aan zodat het als een levend dashboard blijft draaien zonder dat je zelf hoeft te klikken. Verlaat met Esc of de knop rechtsboven.</p>
+      <p>Een volledige scan doorzoekt tientallen pagina's, dus duurt even (meestal een paar seconden); bij automatisch scannen elke 10 seconden loopt er dus vrijwel continu een nieuwe scan, zodat je zo min mogelijk mist. Auction-resultaten blijven een momentopname: een BIN kan al gekocht zijn tegen de tijd dat je het item in-game opent, dus check altijd zelf even voordat je ervan uitgaat dat 'ie er nog staat.</p>
+      <p><strong>Aanbeveling</strong> — Bovenaan elk tabblad zie je een concrete aanbeveling op basis van je ingevulde budget: welk item je het beste kunt kopen, tegen welke prijs, en voor hoeveel je het weer kunt verkopen — gerangschikt op totale verwachte winst (niet alleen margin%), en gecorrigeerd voor hoeveel de markt realistisch kan verwerken.</p>
+      <p><strong>Wat deze tool niet doet</strong> — Dit is puur een <em>informatie- en rekentool</em> gebaseerd op de officiële, publieke Hypixel Bazaar API. Er wordt niets automatisch voor je gekocht, verkocht of geklikt — dat zou tegen de regels van Hypixel zijn (macro's/auto-clickers zijn verboden). Alle flips voer je zelf handmatig uit in het spel.</p>
+      <p><strong>Tips</strong></p>
+      <p>— Begin met flips die een goede margin% hebben ÉN een hoog weekvolume: die zijn het snelst en veiligst te vullen.<br>
+      — Prijzen bewegen continu; ververs regelmatig en reken niet op de exacte winst die hier staat op het moment dat je zelf klikt.<br>
+      — Coins verdampen niet in bazaar-flips als een order niet vult — je krijgt je coins/items dan gewoon weer terug, maar je kapitaal ligt wel "vast" totdat dat gebeurt.</p>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    Databron: officiële, sleutelloze Hypixel Bazaar API (<code>api.hypixel.net/v2/skyblock/bazaar</code>). Geen affiliatie met Hypixel. Gebruik op eigen risico — dit is een rekenhulp, geen garantie op winst.
+  </div>
+</main>
+
+<!-- live, horizontaal scrollende lichtkrant van recente grote bazaar-prijsbewegingen —
+     altijd zichtbaar onderaan, ongeacht welk tabblad open staat. Puur gevoed door echte
+     refresh-tot-refresh prijsverschillen (core.js/computePriceMovers), niets gesimuleerd. -->
+<div class="market-ticker-bar" id="globalTicker" title="Hover om te pauzeren">
+  <div class="market-ticker-track" id="globalTickerTrack"></div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/bazaar.js"></script>
+<script src="js/craft.js"></script>
+<script src="js/enchant.js"></script>
+<script src="js/ahflip.js"></script>
+<script src="js/npcscan.js"></script>
+<script src="js/petflip.js"></script>
+<script src="js/essenceflip.js"></script>
+<script src="js/auctions.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
